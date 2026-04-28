@@ -1,0 +1,705 @@
+/* ─────────────────────────────────────────
+   ViewAbsences.css  ·  Language School Admin
+   ───────────────────────────────────────── */
+
+.va-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+}
+
+/* ══════════════════════════════════════════
+   TOP BAR
+══════════════════════════════════════════ */
+.va-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.va-topbar-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1a1a1a;
+  margin-bottom: 3px;
+}
+
+.va-topbar-sub {
+  font-size: 11.5px;
+  color: #666;
+  display: block;
+}
+
+.va-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.va-btn-export {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 0.5px solid rgba(0, 0, 0, 0.16);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 12.5px;
+  font-family: inherit;
+  color: #555;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.va-btn-export:hover {
+  background: #e6f1fb;
+  border-color: #b5d4f4;
+  color: #185fa5;
+}
+
+.va-btn-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 0.5px solid rgba(0, 0, 0, 0.14);
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.va-btn-close:hover {
+  background: #fcebeb;
+  color: #a32d2d;
+  border-color: #f7c1c1;
+}
+
+/* ══════════════════════════════════════════
+   SUMMARY STATS
+══════════════════════════════════════════ */
+.va-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.va-mini-stat {
+  background: #fff;
+  border: 0.5px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+
+.va-mini-stat:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+}
+
+.va-mini-stat-accent {
+  background: #eaf3de;
+  border-color: rgba(151, 196, 89, 0.4);
+}
+
+.va-mini-val {
+  font-size: 22px;
+  font-weight: 500;
+  color: #1a1a1a;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+
+.va-mini-lbl {
+  font-size: 11px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ══════════════════════════════════════════
+   FILTERS
+══════════════════════════════════════════ */
+.va-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.va-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 0.5px solid rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  padding: 7px 12px;
+  min-width: 220px;
+  flex: 1;
+  max-width: 300px;
+  color: #999;
+  transition: border-color 0.15s;
+}
+
+.va-search:focus-within {
+  border-color: #185fa5;
+}
+
+.va-search input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: #1a1a1a;
+  width: 100%;
+  font-family: inherit;
+}
+
+.va-filter-group {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.va-filter-group select {
+  padding: 7px 10px;
+  border: 0.5px solid rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 12.5px;
+  color: #333;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%23888' stroke-width='1.6'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 26px;
+}
+
+.va-filter-group select:focus {
+  outline: none;
+  border-color: #185fa5;
+  background-color: #fff;
+}
+
+.va-btn-reset {
+  padding: 7px 14px;
+  border: 0.5px solid rgba(226, 75, 74, 0.3);
+  border-radius: 8px;
+  background: #fcebeb;
+  color: #a32d2d;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.va-btn-reset:hover {
+  background: #f7c1c1;
+}
+
+/* ══════════════════════════════════════════
+   TABLE
+══════════════════════════════════════════ */
+.va-table-wrap {
+  background: #fff;
+  border: 0.5px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.va-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.va-table th {
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 12px 14px;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.09);
+  background: #f9fafb;
+  white-space: nowrap;
+}
+
+.va-th-sort {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s;
+}
+
+.va-th-sort:hover {
+  color: #185fa5;
+}
+
+.va-sort-ic {
+  font-size: 10px;
+  color: #bbb;
+  margin-left: 4px;
+}
+
+.va-sort-active {
+  color: #185fa5;
+}
+
+.va-table td {
+  font-size: 13px;
+  padding: 10px 14px;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+  color: #1a1a1a;
+  vertical-align: middle;
+}
+
+.va-table tr:last-child td {
+  border-bottom: none;
+}
+
+.va-table tbody tr {
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.va-table tbody tr:hover td {
+  background: #f4f8fd;
+}
+
+.va-row-selected td {
+  background: #e6f1fb !important;
+}
+
+/* Student cell */
+.va-s-cell {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.va-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e6f1fb;
+  color: #0c447c;
+  font-size: 10px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.va-name {
+  font-weight: 500;
+}
+.va-lang {
+  color: #555;
+}
+.va-date {
+  color: #555;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.va-reason {
+  color: #555;
+  font-size: 12.5px;
+}
+
+/* Level badge */
+.va-lvl {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.va-lv-a {
+  background: #eaf3de;
+  color: #3b6d11;
+}
+.va-lv-b {
+  background: #e6f1fb;
+  color: #0c447c;
+}
+.va-lv-c {
+  background: #faeeda;
+  color: #633806;
+}
+
+/* Session badge */
+.va-session {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.va-sess-morning {
+  background: #e6f1fb;
+  color: #0c447c;
+}
+.va-sess-evening {
+  background: #faeeda;
+  color: #633806;
+}
+.va-sess-weekend {
+  background: #f3e8ff;
+  color: #5b21b6;
+}
+
+/* Status badge */
+.va-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.va-just {
+  background: #eaf3de;
+  color: #3b6d11;
+}
+.va-unjust {
+  background: #faeeda;
+  color: #633806;
+}
+
+.va-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* Detail button */
+.va-btn-detail {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 0.5px solid rgba(0, 0, 0, 0.14);
+  background: transparent;
+  font-size: 15px;
+  line-height: 1;
+  color: #888;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.va-btn-detail:hover {
+  background: #e6f1fb;
+  border-color: #b5d4f4;
+  color: #185fa5;
+}
+
+.va-empty {
+  text-align: center;
+  padding: 40px 0;
+  color: #999;
+  font-size: 13.5px;
+}
+
+/* ══════════════════════════════════════════
+   DETAIL PANEL
+══════════════════════════════════════════ */
+.va-detail {
+  background: #fff;
+  border: 0.5px solid rgba(24, 95, 165, 0.25);
+  border-radius: 12px;
+  padding: 18px 20px;
+  flex-shrink: 0;
+  animation: va-slide-in 0.18s ease;
+}
+
+@keyframes va-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.va-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.va-detail-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #e6f1fb;
+  color: #0c447c;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.va-detail-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.va-detail-sub {
+  display: block;
+  font-size: 11.5px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.va-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  border: 0.5px solid rgba(0, 0, 0, 0.09);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.va-detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  border-right: 0.5px solid rgba(0, 0, 0, 0.07);
+}
+
+.va-detail-row:last-child {
+  border-right: none;
+}
+
+.va-detail-lbl {
+  font-size: 10.5px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.va-detail-val {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.va-detail-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.va-btn-justify,
+.va-btn-unjustify,
+.va-btn-notify {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.va-btn-justify {
+  background: #eaf3de;
+  border: 0.5px solid rgba(151, 196, 89, 0.5);
+  color: #3b6d11;
+}
+
+.va-btn-justify:hover {
+  background: #c0dd97;
+}
+
+.va-btn-unjustify {
+  background: #faeeda;
+  border: 0.5px solid rgba(239, 159, 39, 0.4);
+  color: #633806;
+}
+
+.va-btn-unjustify:hover {
+  background: #fac775;
+}
+
+.va-btn-notify {
+  background: #fff;
+  border: 0.5px solid rgba(0, 0, 0, 0.15);
+  color: #555;
+}
+
+.va-btn-notify:hover {
+  background: #e6f1fb;
+  border-color: #b5d4f4;
+  color: #185fa5;
+}
+
+/* ══════════════════════════════════════════
+   PAGINATION
+══════════════════════════════════════════ */
+.va-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex-shrink: 0;
+  padding: 2px 0;
+}
+
+.va-pg-info {
+  font-size: 12px;
+  color: #888;
+}
+
+.va-pg-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.va-pg-btn {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 7px;
+  border: 0.5px solid rgba(0, 0, 0, 0.13);
+  background: #fff;
+  font-size: 12.5px;
+  color: #444;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.va-pg-btn:hover:not(:disabled) {
+  background: #e6f1fb;
+  border-color: #b5d4f4;
+  color: #185fa5;
+}
+
+.va-pg-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.va-pg-active {
+  background: #185fa5 !important;
+  border-color: #185fa5 !important;
+  color: #fff !important;
+  font-weight: 500;
+}
+
+.va-pg-ellipsis {
+  font-size: 13px;
+  color: #aaa;
+  padding: 0 4px;
+  user-select: none;
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .va-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .va-detail-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .va-detail-row:nth-child(2n) {
+    border-right: none;
+  }
+  .va-detail-row:nth-child(n + 3) {
+    border-top: 0.5px solid rgba(0, 0, 0, 0.07);
+  }
+}
+
+@media (max-width: 700px) {
+  .va-filter-group {
+    flex-direction: column;
+    width: 100%;
+  }
+  .va-filter-group select {
+    width: 100%;
+  }
+  .va-search {
+    max-width: 100%;
+  }
+
+  .va-table th:nth-child(3),
+  .va-table td:nth-child(3),
+  .va-table th:nth-child(7),
+  .va-table td:nth-child(7) {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .va-stats-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .va-table th:nth-child(5),
+  .va-table td:nth-child(5) {
+    display: none;
+  }
+}

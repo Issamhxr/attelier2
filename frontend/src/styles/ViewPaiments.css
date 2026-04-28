@@ -1,0 +1,653 @@
+/* ═══════════════════════════════════════════════════════════════
+   ViewPayments.css
+   Compatible avec Home.css  (--blue-*, --radius-*, --text-*, --bg-*)
+   Compatible avec Dashboard.css (--db-blue, --db-surface, --db-border…)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Page wrapper ─────────────────────────────────────────────── */
+.vp-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: vp-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes vp-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── KPI grid ─────────────────────────────────────────────────── */
+/* réutilise .db-stats + .db-stat du Dashboard — aucun override nécessaire */
+.vp-page .db-stat-dl::before { content: '' !important; }
+
+/* ── Mid row (chart + donut) ──────────────────────────────────── */
+.vp-mid {
+  display: grid;
+  grid-template-columns: 1fr 292px;
+  gap: 14px;
+}
+
+/* ── Revenue chart ────────────────────────────────────────────── */
+.vp-chart-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.vp-chart-svg-area {
+  width: 100%;
+  height: 148px;
+  display: block;
+  position: relative;
+}
+
+/* ── Donut + légende ──────────────────────────────────────────── */
+.vp-donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.vp-donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.vp-donut-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 7px;
+  border-radius: var(--db-r, var(--radius-md));
+  cursor: default;
+  transition: background 0.16s ease;
+}
+
+.vp-donut-row:hover { background: var(--db-bg, var(--bg-secondary)); }
+
+.vp-donut-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.vp-donut-lbl {
+  font-size: 12.5px;
+  color: var(--db-text2, var(--text-secondary));
+  flex: 1;
+  min-width: 0;
+}
+
+.vp-donut-n {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--db-text, var(--text-primary));
+}
+
+.vp-donut-pct {
+  font-size: 11px;
+  color: var(--db-text3, #999);
+  min-width: 32px;
+  text-align: right;
+}
+
+/* ── Controls (search + buttons) ─────────────────────────────── */
+.vp-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.vp-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--db-bg, var(--bg-secondary));
+  border: var(--db-border, 0.5px solid rgba(0,0,0,0.12));
+  border-radius: var(--db-r, var(--radius-md));
+  padding: 6px 12px;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.vp-search:focus-within {
+  border-color: var(--db-blue-md, var(--blue-200));
+  background: var(--db-surface, var(--bg-primary));
+  box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.09);
+}
+
+.vp-search input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 12.5px;
+  color: var(--db-text, var(--text-primary));
+  font-family: inherit;
+  width: 148px;
+  transition: width 0.22s ease;
+}
+
+.vp-search:focus-within input { width: 180px; }
+.vp-search input::placeholder { color: var(--db-text3, #999); }
+
+/* Bouton Export — reprend le style .btn-outline-blue de Home */
+.vp-btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--db-blue, var(--blue-600));
+  background: transparent;
+  border: 0.5px solid var(--db-blue, var(--blue-600));
+  border-radius: var(--db-r, var(--radius-md));
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: background 0.18s, transform 0.15s;
+}
+
+.vp-btn-export:hover {
+  background: var(--db-blue-lt, var(--blue-50));
+  transform: translateY(-1px);
+}
+
+/* Bouton Nouveau — reprend .enroll de Home */
+.vp-btn-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  background: var(--db-blue, var(--blue-600));
+  border: none;
+  border-radius: var(--db-r, var(--radius-md));
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: background 0.18s, transform 0.15s, box-shadow 0.18s;
+}
+
+.vp-btn-new:hover {
+  background: var(--db-blue-dk, var(--blue-800));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(24, 95, 165, 0.28);
+}
+
+.vp-btn-new:active,
+.vp-btn-export:active { transform: translateY(0); box-shadow: none; }
+
+/* ── Filter tabs ──────────────────────────────────────────────── */
+.vp-tabs {
+  display: flex;
+  gap: 5px;
+  padding-bottom: 14px;
+  border-bottom: var(--db-border, 0.5px solid rgba(0,0,0,0.12));
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+/* reprend le style .chip de Home + pill shape */
+.vp-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 13px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-family: inherit;
+  color: var(--db-text2, var(--text-secondary));
+  background: transparent;
+  border: 0.5px solid rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s, color 0.18s, border-color 0.18s, transform 0.15s;
+}
+
+.vp-tab:hover:not(.vp-tab-active) {
+  background: var(--db-bg, var(--bg-secondary));
+  color: var(--db-text, var(--text-primary));
+  border-color: rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
+}
+
+.vp-tab.vp-tab-active {
+  background: var(--db-blue, var(--blue-600));
+  color: #fff;
+  border-color: var(--db-blue, var(--blue-600));
+  font-weight: 500;
+  box-shadow: 0 3px 10px rgba(24, 95, 165, 0.26);
+}
+
+.vp-tab-n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.08);
+  color: inherit;
+  line-height: 1;
+  transition: background 0.18s;
+}
+
+.vp-tab.vp-tab-active .vp-tab-n {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Table ────────────────────────────────────────────────────── */
+/* hérite de .db-table du Dashboard pour th / td / tr styles */
+.vp-tbl-wrap { overflow-x: auto; }
+
+.vp-row { cursor: pointer; }
+
+/* ids monospace — cohérent avec le mono du Dashboard */
+.vp-inv-id {
+  font-size: 11px;
+  color: var(--db-text3, #999);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  font-family: "SF Mono", "Fira Code", "Fira Mono", monospace;
+}
+
+.vp-s-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--db-text, var(--text-primary));
+  white-space: nowrap;
+}
+
+.vp-s-sub {
+  font-size: 11px;
+  color: var(--db-text2, var(--text-secondary));
+}
+
+.vp-amount {
+  font-weight: 500;
+  font-size: 13px;
+  white-space: nowrap;
+  letter-spacing: -0.2px;
+  color: var(--db-text, var(--text-primary));
+}
+
+.vp-paid-cell {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.vp-method {
+  font-size: 12px;
+  color: var(--db-text2, var(--text-secondary));
+}
+
+/* ── Progress bar ─────────────────────────────────────────────── */
+.vp-prog {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 96px;
+}
+
+.vp-prog-track {
+  flex: 1;
+  height: 5px;
+  background: var(--db-bg, var(--bg-secondary));
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.vp-prog-fill {
+  height: 5px;
+  border-radius: 3px;
+  position: relative;
+  transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.vp-prog-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.42), transparent);
+  border-radius: inherit;
+  animation: vp-shimmer 2.4s 1.1s ease-in-out infinite;
+}
+
+@keyframes vp-shimmer {
+  0%   { transform: translateX(-100%); }
+  60%  { transform: translateX(100%);  }
+  100% { transform: translateX(100%);  }
+}
+
+.vp-prog-pct {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--db-text2, var(--text-secondary));
+  min-width: 30px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ── Status badges ────────────────────────────────────────────── */
+/* Tokens alignés sur Home.css et Dashboard.css */
+.vp-st-paid {
+  background: #EAF3DE;   /* --green-50 / --db-green-bg */
+  color: #27500A;        /* --green-800 */
+}
+
+.vp-st-partial {
+  background: #E6F1FB;   /* --blue-50 / --db-blue-lt */
+  color: #0C447C;        /* --blue-800 / --db-blue-dk */
+}
+
+.vp-st-pending {
+  background: #FAEEDA;   /* --db-amber-bg */
+  color: #633806;        /* --db-amber / --amber */
+}
+
+.vp-st-overdue {
+  background: #FCEBEB;   /* --db-red-bg */
+  color: #A32D2D;        /* --db-red */
+  font-weight: 600;
+  animation: vp-overdue 2.8s ease-in-out infinite;
+}
+
+@keyframes vp-overdue {
+  0%, 100% { opacity: 1;   }
+  50%       { opacity: 0.6; }
+}
+
+/* ── Empty state ──────────────────────────────────────────────── */
+.vp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 44px 20px;
+  color: var(--db-text2, var(--text-secondary));
+}
+
+.vp-empty-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--db-bg, var(--bg-secondary));
+  border: var(--db-border, 0.5px solid rgba(0,0,0,0.12));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--db-text3, #bbb);
+  margin-bottom: 6px;
+}
+
+.vp-empty-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--db-text, var(--text-primary));
+}
+
+.vp-empty-sub {
+  font-size: 12.5px;
+  color: var(--db-text2, var(--text-secondary));
+}
+
+/* ── Modal overlay ────────────────────────────────────────────── */
+.vp-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 18, 30, 0.34);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: vp-ov-in 0.18s ease both;
+}
+
+@keyframes vp-ov-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Modal card ───────────────────────────────────────────────── */
+/* Radius + border alignés sur Home (.contact-form-panel) + Dashboard (.db-panel) */
+.vp-modal {
+  background: var(--db-surface, var(--bg-primary));
+  border: 0.5px solid rgba(0, 0, 0, 0.14);
+  border-radius: 14px;               /* entre --radius-lg (12) et le 16px du Dashboard */
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  overflow: hidden;
+  box-shadow:
+    0 2px 8px  rgba(0, 0, 0, 0.06),
+    0 12px 32px rgba(0, 0, 0, 0.10),
+    0 32px 64px rgba(0, 0, 0, 0.07);
+  animation: vp-modal-in 0.26s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+@keyframes vp-modal-in {
+  from { opacity: 0; transform: scale(0.95) translateY(12px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+
+.vp-modal-top {
+  padding: 22px 22px 18px;
+  border-bottom: var(--db-border, 0.5px solid rgba(0,0,0,0.12));
+}
+
+.vp-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.vp-modal-id {
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 10.5px;
+  color: var(--db-text3, #999);
+  letter-spacing: 0.04em;
+  display: block;
+  margin-bottom: 3px;
+}
+
+.vp-modal-name {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--db-text, var(--text-primary));
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+
+/* reprend le bouton rond close du Dashboard */
+.vp-modal-close {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: var(--db-border2, 0.5px solid rgba(0,0,0,0.18));
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--db-text2, var(--text-secondary));
+  transition: background 0.18s, color 0.18s, transform 0.15s;
+}
+
+.vp-modal-close:hover {
+  background: #FCEBEB;
+  color: #A32D2D;
+  transform: scale(1.1);
+}
+
+/* badges méta en haut de la modal */
+.vp-modal-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── Modal rows (zébrées) — style .info-item de Home ── */
+.vp-modal-body { padding: 0; }
+
+.vp-modal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 22px;
+  font-size: 13px;
+  border-bottom: var(--db-border, 0.5px solid rgba(0,0,0,0.08));
+  transition: background 0.14s;
+}
+
+.vp-modal-row:last-child { border-bottom: none; }
+.vp-modal-row:nth-child(odd) { background: var(--db-bg, var(--bg-secondary)); }
+.vp-modal-row:hover { background: var(--db-blue-lt, var(--blue-50)); }
+.vp-modal-row span  { color: var(--db-text2, var(--text-secondary)); }
+.vp-modal-row strong { font-weight: 500; color: var(--db-text, var(--text-primary)); }
+
+/* ── Modal footer ─────────────────────────────────────────────── */
+.vp-modal-foot {
+  padding: 18px 22px;
+  border-top: var(--db-border, 0.5px solid rgba(0,0,0,0.12));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vp-modal-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.vp-modal-bar-track {
+  flex: 1;
+  height: 7px;
+  background: var(--db-bg, var(--bg-secondary));
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.vp-modal-bar-fill {
+  height: 7px;
+  background: var(--db-blue, var(--blue-600));
+  border-radius: 4px;
+  transition: width 1s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+}
+
+.vp-modal-bar-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  border-radius: inherit;
+  animation: vp-shimmer 2s 0.7s ease-in-out infinite;
+}
+
+.vp-modal-bar-pct {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--db-blue, var(--blue-600));
+  min-width: 38px;
+  text-align: right;
+}
+
+/* Bouton principal modal — reprend .enroll / .btn-contact-submit de Home */
+.vp-modal-btn-primary {
+  width: 100%;
+  padding: 11px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--db-blue, var(--blue-600));
+  border: none;
+  border-radius: var(--db-r, var(--radius-md));
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.18s, transform 0.15s, box-shadow 0.18s;
+}
+
+.vp-modal-btn-primary:hover {
+  background: var(--db-blue-dk, var(--blue-800));
+  transform: translateY(-1px);
+  box-shadow: 0 5px 18px rgba(24, 95, 165, 0.32);
+}
+
+.vp-modal-btn-primary:active { transform: translateY(0); box-shadow: none; }
+
+/* Bouton secondaire modal — reprend .btn-outline-blue de Home */
+.vp-modal-btn-ghost {
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--db-text2, var(--text-secondary));
+  background: transparent;
+  border: 0.5px solid rgba(0, 0, 0, 0.14);
+  border-radius: var(--db-r, var(--radius-md));
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.18s, color 0.18s;
+}
+
+.vp-modal-btn-ghost:hover {
+  background: var(--db-bg, var(--bg-secondary));
+  color: var(--db-text, var(--text-primary));
+}
+
+/* ── Semantic color helpers ───────────────────────────────────── */
+.vp-c-ok      { color: #27500A !important; }  /* --green-800 */
+.vp-c-danger  { color: #A32D2D !important; }  /* --db-red    */
+.vp-c-muted   { color: var(--db-text3, #999) !important; }
+
+/* ── Responsive ───────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .vp-mid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 900px) {
+  /* masque Méthode */
+  .vp-col-method { display: none; }
+}
+
+@media (max-width: 720px) {
+  /* masque Montant payé */
+  .vp-col-paid { display: none; }
+  .vp-search input { width: 110px; }
+  .vp-search:focus-within input { width: 140px; }
+}
+
+@media (max-width: 600px) {
+  .vp-donut-wrap { flex-direction: column; align-items: flex-start; }
+  /* masque la progression */
+  .vp-col-prog { display: none; }
+  .vp-tabs { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .vp-tab  { justify-content: center; }
+}
+
+@media (max-width: 480px) {
+  .vp-controls { flex-wrap: wrap; }
+  /* masque Niveau */
+  .vp-col-level { display: none; }
+}

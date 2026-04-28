@@ -1,0 +1,106 @@
+/* --- RESET CRITIQUE : Supprime le vide à droite et définit le fond --- */
+:root {
+  --bg-site: white;       /* Couleur de fond du site (gris clair type Facebook/Admin) */
+  --bg-card: #ffffff;       /* Couleur du Header et de la Sidebar */
+  --border: #e0e0e0;
+  --text-h: #1a1a1a;
+  --accent: #007bff;
+  --accent-bg: #e7f1ff;
+  --accent-border: #b3d7ff;
+  --code-bg: #f8f9fa;
+}
+
+/* On force html et body à ignorer les marges et la largeur max de Vite/React */
+html, body, #root {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  background-color: var(--bg-site); /* Couleur du site appliquée ici */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* --- LAYOUT STRUCTURE --- */
+
+.layout-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw; /* Utilise la largeur totale de la fenêtre */
+}
+
+.header {
+  height: 60px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  background-color: var(--bg-card); /* Fond blanc */
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+.app-body {
+  display: flex;
+  flex: 1; 
+  width: 100%;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 250px;
+  height: 100%;
+  background-color: var(--bg-card); /* Fond blanc */
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.content {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+  /* Le fond var(--bg-site) sera visible ici */
+}
+
+/* --- VOS COMPOSANTS (Nettoyés) --- */
+
+.counter {
+  font-size: 16px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 2px solid transparent;
+  transition: 0.3s;
+  margin-bottom: 24px;
+}
+
+.counter:hover {
+  border-color: var(--accent-border);
+}
+
+/* Section Hero et autres styles */
+.hero {
+  position: relative;
+}
+
+#center {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  place-content: center;
+  place-items: center;
+}
+
+#next-steps {
+  display: flex;
+  border-top: 1px solid var(--border);
+  background: var(--bg-card); /* Pour que les étapes soient sur fond blanc */
+  border-radius: 8px;
+  margin-top: 20px;
+}
