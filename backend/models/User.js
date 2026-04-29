@@ -7,18 +7,13 @@ const UserSchema = new mongoose.Schema({
   nom:    { type: String, trim: true, default: '' },
   prenom: { type: String, trim: true, default: '' },
   email:  {
-    type: String,
-    required: [true, 'Email requis.'],
-    unique: true,
-    lowercase: true,
-    trim: true,
+    type: String, required: [true, 'Email requis.'],
+    unique: true, lowercase: true, trim: true,
     match: [/^\S+@\S+\.\S+$/, 'Email invalide.'],
   },
   password: {
-    type: String,
-    required: [true, 'Mot de passe requis.'],
-    minlength: [6, 'Mot de passe trop court (6 min).'],
-    select: false,
+    type: String, required: [true, 'Mot de passe requis.'],
+    minlength: [6, 'Mot de passe trop court (6 min).'], select: false,
   },
   role: {
     type: String,
@@ -31,7 +26,7 @@ const UserSchema = new mongoose.Schema({
   avatar:    { type: String, default: '' },
   dateInscription: { type: Date, default: Date.now },
 
-  // ── Champs étudiant ──────────────────────
+  // Étudiant
   language: { type: String, default: '' },
   level:    { type: String, default: '' },
   schedule: { type: String, default: '' },
@@ -39,76 +34,54 @@ const UserSchema = new mongoose.Schema({
   absences: { type: Number, default: 0, min: 0 },
   notes:    { type: String, default: '' },
 
-  // ── Champs enseignant ────────────────────
+  // Enseignant
   specialty:   { type: String, default: '' },
   hours:       { type: Number, default: 0, min: 0 },
   classes:     { type: [String], default: [] },
 
-  // ── Champs secrétaire ────────────────────
+  // Secrétaire
   department:  { type: String, default: '' },
   permissions: { type: [String], default: [] },
 
-  // ── Champs parent ─────────────────────────
+  // Parent
   linkedStudent: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   relation:      { type: String, default: '' },
 
-  // ── Archivage ───────────────────────────
   archivedAt: { type: Date, default: null },
 
-  // ── Refresh Token ───────────────────────
+  // Tokens
   refreshToken:       { type: String, select: false, default: null },
   refreshTokenExpire: { type: Date,   default: null },
-
-  // ── Reset Password ──────────────────────
   resetPasswordToken:  { type: String, select: false, default: null },
   resetPasswordExpire: { type: Date,   select: false, default: null },
-
-  // ── Email verification ──────────────────
   isEmailVerified:       { type: Boolean, default: false },
   emailVerificationToken:{ type: String,  select: false, default: null },
-
-  // ── Dernière connexion ──────────────────
   lastLogin: { type: Date, default: null },
 }, {
   timestamps: true,
-  toJSON:     { virtuals: true },
-  toObject:   { virtuals: true },
+  toJSON:  { virtuals: true },
+  toObject:{ virtuals: true },
 });
 
-/* ══════════════════════════════════════════
-   VIRTUALS
-══════════════════════════════════════════ */
 UserSchema.virtual('fullName').get(function () {
   return `${this.prenom || ''} ${this.nom || ''}`.trim();
 });
 
-/* ══════════════════════════════════════════
-   INDEXES
-══════════════════════════════════════════ */
 UserSchema.index({ role: 1, actif: 1 });
 UserSchema.index({ email: 1 });
 UserSchema.index({ section: 1 });
 
-/* ══════════════════════════════════════════
-   PRE-SAVE : Hash password
-══════════════════════════════════════════ */
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-  const salt   = await bcrypt.genSalt(12);
+  const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
 
-/* ══════════════════════════════════════════
-   METHODS
-══════════════════════════════════════════ */
-
-// Vérifier le mot de passe
 UserSchema.methods.matchPassword = async function (entered) {
   return bcrypt.compare(entered, this.password);
 };
 
-// Générer un access token JWT
 UserSchema.methods.getSignedJwtToken = function () {
   return jwt.sign(
     { id: this._id, role: this.role },
@@ -117,7 +90,6 @@ UserSchema.methods.getSignedJwtToken = function () {
   );
 };
 
-// Générer un refresh token
 UserSchema.methods.getRefreshToken = function () {
   const token = jwt.sign(
     { id: this._id },
@@ -129,15 +101,13 @@ UserSchema.methods.getRefreshToken = function () {
   return token;
 };
 
-// Générer un token de réinitialisation de mot de passe
 UserSchema.methods.getResetPasswordToken = function () {
-  const raw   = crypto.randomBytes(32).toString('hex');
+  const raw = crypto.randomBytes(32).toString('hex');
   this.resetPasswordToken  = crypto.createHash('sha256').update(raw).digest('hex');
-  this.resetPasswordExpire = Date.now() + (parseInt(process.env.RESET_TOKEN_EXPIRE) || 3600000); // 1h
+  this.resetPasswordExpire = Date.now() + (parseInt(process.env.RESET_TOKEN_EXPIRE) || 3600000);
   return raw;
 };
 
-// Token de vérification d'email
 UserSchema.methods.getEmailVerificationToken = function () {
   const raw = crypto.randomBytes(32).toString('hex');
   this.emailVerificationToken = crypto.createHash('sha256').update(raw).digest('hex');
