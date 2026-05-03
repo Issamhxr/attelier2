@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SchoolCore</string>
+    <string name="title_activity_main">SchoolCore</string>
+    <string name="package_name">com.schoolcore.app</string>
+    <string name="custom_url_scheme">com.schoolcore.app</string>
+</resources>

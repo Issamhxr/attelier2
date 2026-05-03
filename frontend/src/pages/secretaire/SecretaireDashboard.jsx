@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "../../styles/DSC.css";
+import { useNotifications } from "../../hooks/useNotifications";
+import { useSocket } from "../../hooks/useSocket";
 
 /* ══════════════════════════════════════════
    ICONS
@@ -182,7 +184,7 @@ function StatCard({ icon, label, value, delta, neg, accent }) {
 }
 
 /* ══════════════════════════════════════════
-   REGISTER MODAL
+   REGISTER MODAL — ✅ téléphone algérien
 ══════════════════════════════════════════ */
 function RegisterModal({ sections, onClose, onSuccess }) {
   const [step, setStep] = useState(1);
@@ -212,7 +214,17 @@ function RegisterModal({ sections, onClose, onSuccess }) {
               <div className="sc-field"><label>Prénom</label><input className="sc-input" placeholder="Mohammed" value={form.fname} onChange={e => upd("fname", e.target.value)}/></div>
               <div className="sc-field"><label>Nom</label><input className="sc-input" placeholder="Bouchemot" value={form.lname} onChange={e => upd("lname", e.target.value)}/></div>
             </div>
-            <div className="sc-field"><label>Téléphone</label><input className="sc-input" placeholder="+213 6 00 00 00 00" value={form.phone} onChange={e => upd("phone", e.target.value)}/></div>
+            {/* ✅ FORMAT TÉLÉPHONE ALGÉRIEN */}
+            <div className="sc-field">
+              <label>Téléphone</label>
+              <input
+                className="sc-input"
+                placeholder="0600000000"
+                maxLength={10}
+                value={form.phone}
+                onChange={e => upd("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
+              />
+            </div>
             <div className="sc-field"><label>Email</label><input className="sc-input" type="email" placeholder="etudiant@mail.com" value={form.email} onChange={e => upd("email", e.target.value)}/></div>
           </div>
         )}
@@ -303,7 +315,7 @@ function PaymentModal({ students, onClose, onSuccess }) {
 /* ══════════════════════════════════════════
    DASHBOARD VIEW
 ══════════════════════════════════════════ */
-function DashboardView({ sections, pending, setPending, payments, students, setActiveNav, showRegister, showPayment, API, headers, loadAll, showT }) {
+function DashboardView({ sections, pending, setPending, payments, students, setActiveNav, showRegister, showPayment, API, getHeaders, safeFetch, loadAll, showT }) {
   const total    = useCountUp(students.length + pending.length);
   const paid     = useCountUp(payments.filter(p => p.status === "paid").length);
   const unpaid   = useCountUp(payments.filter(p => p.status !== "paid").length);
@@ -312,7 +324,8 @@ function DashboardView({ sections, pending, setPending, payments, students, setA
 
   const handleAccept = async (id) => {
     try {
-      const res = await fetch(`${API}/secretaire/students/${id}/accept`, { method:"PATCH", headers });
+      const res = await safeFetch(`${API}/secretaire/students/${id}/accept`, { method:"PATCH" });
+      if (!res) return;
       const data = await res.json();
       if (data.success) { await loadAll(); showT("Étudiant accepté."); }
     } catch (err) { console.error(err); }
@@ -320,7 +333,8 @@ function DashboardView({ sections, pending, setPending, payments, students, setA
 
   const handleReject = async (id) => {
     try {
-      const res = await fetch(`${API}/secretaire/students/${id}/reject`, { method:"DELETE", headers });
+      const res = await safeFetch(`${API}/secretaire/students/${id}/reject`, { method:"DELETE" });
+      if (!res) return;
       const data = await res.json();
       if (data.success) { await loadAll(); showT("Inscription rejetée."); }
     } catch (err) { console.error(err); }
@@ -400,7 +414,7 @@ function DashboardView({ sections, pending, setPending, payments, students, setA
         <div className="sc-right-col">
           <div className="sc-panel">
             <div className="sc-ph">
-              <div><span className="sc-pt">Inscriptions en attente</span><span className="sc-ps">{pending.length} à valider</span></div>
+              <div><span className="sc-pt"> Pending registrations</span><span className="sc-ps">{pending.length} à valider</span></div>
               {pending.length > 0 && <span className="sc-badge-count">{pending.length}</span>}
             </div>
             <div className="sc-pending-list">
@@ -447,7 +461,7 @@ function DashboardView({ sections, pending, setPending, payments, students, setA
 /* ══════════════════════════════════════════
    INSCRIPTIONS VIEW
 ══════════════════════════════════════════ */
-function InscriptionsView({ students, pending, sections, showRegister, API, headers, loadAll, showT }) {
+function InscriptionsView({ students, pending, sections, showRegister, API, safeFetch, loadAll, showT }) {
   const [search, setSearch] = useState("");
   const [filterSec, setFilterSec] = useState("Toutes");
 
@@ -459,7 +473,8 @@ function InscriptionsView({ students, pending, sections, showRegister, API, head
 
   const handleAccept = async (id) => {
     try {
-      const res = await fetch(`${API}/secretaire/students/${id}/accept`, { method:"PATCH", headers });
+      const res = await safeFetch(`${API}/secretaire/students/${id}/accept`, { method:"PATCH" });
+      if (!res) return;
       const data = await res.json();
       if (data.success) { await loadAll(); showT("Étudiant accepté et activé."); }
     } catch (err) { console.error(err); }
@@ -467,7 +482,8 @@ function InscriptionsView({ students, pending, sections, showRegister, API, head
 
   const handleReject = async (id) => {
     try {
-      const res = await fetch(`${API}/secretaire/students/${id}/reject`, { method:"DELETE", headers });
+      const res = await safeFetch(`${API}/secretaire/students/${id}/reject`, { method:"DELETE" });
+      if (!res) return;
       const data = await res.json();
       if (data.success) { await loadAll(); showT("Inscription rejetée."); }
     } catch (err) { console.error(err); }
@@ -477,7 +493,7 @@ function InscriptionsView({ students, pending, sections, showRegister, API, head
     <>
       <div className="sc-panel">
         <div className="sc-ph">
-          <div><span className="sc-pt">Inscriptions en attente</span><span className="sc-ps">{pending.length} demandes à valider</span></div>
+          <div><span className="sc-pt">Pending registrations</span><span className="sc-ps">{pending.length} demandes à valider</span></div>
           <button className="sc-btn-primary sc-btn-sm" onClick={showRegister}><Icon name="plus" size={13}/> Inscrire</button>
         </div>
         {pending.length === 0
@@ -501,7 +517,7 @@ function InscriptionsView({ students, pending, sections, showRegister, API, head
       </div>
       <div className="sc-panel">
         <div className="sc-ph">
-          <div><span className="sc-pt">Tous les étudiants</span><span className="sc-ps">{filtered.length} étudiants</span></div>
+          <div><span className="sc-pt">All students</span><span className="sc-ps">{filtered.length} étudiants</span></div>
           <div style={{ display:"flex", gap:8 }}>
             <div style={{ display:"flex", alignItems:"center", gap:7, background:"var(--db-bg)", border:"var(--db-border)", borderRadius:9, padding:"7px 12px" }}>
               <Icon name="search" size={12}/>
@@ -533,21 +549,57 @@ function InscriptionsView({ students, pending, sections, showRegister, API, head
     </>
   );
 }
+
 /* ══════════════════════════════════════════
-   ETUDIANTS VIEW
+   ETUDIANTS VIEW — ✅ onglet Archivés
 ══════════════════════════════════════════ */
-function EtudiantsView({ API, headers, showT }) {
+function EtudiantsView({ API, safeFetch, showT }) {
   const [students, setStudents] = useState([]);
   const [loading, setLoading]  = useState(true);
   const [search, setSearch]    = useState("");
   const [filterLevel, setFilterLevel] = useState("Tous");
   const [filterStatus, setFilterStatus] = useState("Tous");
+  const [tab, setTab] = useState("actifs");
+  const [archived, setArchived] = useState([]);
+  const [archivedLoading, setArchivedLoading] = useState(false);
+  const [profileStudentId, setProfileStudentId] = useState(null); // ✅ AJOUTER
+
+  const loadArchived = async () => {
+    setArchivedLoading(true);
+    try {
+      const res = await safeFetch(`${API}/users/archived?role=etudiant`);
+      if (!res) return;
+      const data = await res.json();
+      if (data.success) setArchived(data.users || []);
+    } catch (err) { console.error(err); }
+    finally { setArchivedLoading(false); }
+  };
+const restoreStudent = async (id) => {
+  try {
+    const res = await safeFetch(`${API}/users/${id}/restore`, { method: "PATCH" });
+    if (!res) return;
+    const data = await res.json();
+    if (data.success) {
+      setArchived(prev => prev.filter(s => s._id !== id));
+      showT("Étudiant restauré !");
+      // Recharger la liste active
+      const r = await safeFetch(`${API}/users/role/etudiant`);
+      if (!r) return;
+      const d = await r.json();
+      if (d.success) setStudents(d.users);
+    }
+  } catch (err) { console.error(err); }
+};
 
   useEffect(() => {
-    fetch(`${API}/users/role/etudiant`, { headers })
-      .then(r => r.json())
+    if (tab === "archives" && archived.length === 0) loadArchived();
+  }, [tab]);
+
+  useEffect(() => {
+    safeFetch(`${API}/users/role/etudiant`)
+      .then(r => r?.json())
       .then(data => {
-        if (data.success) setStudents(data.users);
+        if (data?.success) setStudents(data.users);
       })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
@@ -565,136 +617,214 @@ function EtudiantsView({ API, headers, showT }) {
   const total  = students.length;
   const actifs = students.filter(s => s.actif).length;
 
-  return (
+  const tabBtnStyle = (key) => ({
+    padding: "6px 16px",
+    borderRadius: "var(--db-r,8px)",
+    border: "1px solid var(--db-border,#e5e7eb)",
+    fontSize: 12,
+    fontWeight: tab === key ? 600 : 400,
+    cursor: "pointer",
+    background: tab === key ? "#1A6CC4" : "transparent",
+    color: tab === key ? "#fff" : "var(--db-text2,#666)",
+    transition: "all 0.2s",
+  });
+
+return (
     <>
-      {/* Cartes résumé */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, marginBottom:4 }}>
-        {[
-          { lbl:"Total étudiants", val: total,          color:"#1A6CC4" },
-          { lbl:"Actifs",          val: actifs,          color:"#2D7A3A" },
-          { lbl:"En attente",      val: total - actifs,  color:"#C0352A" },
-        ].map(c => (
-          <div className="sc-panel" key={c.lbl} style={{ textAlign:"center" }}>
-            <div style={{ fontSize:11, fontWeight:600, color:"var(--db-text3)", textTransform:"uppercase", letterSpacing:".05em", marginBottom:6 }}>{c.lbl}</div>
-            <div style={{ fontFamily:"'Sora',sans-serif", fontSize:28, fontWeight:600, color:c.color }}>{c.val}</div>
-          </div>
-        ))}
+      {/* ✅ Modal profil étudiant */}
+      {profileStudentId && (
+        <StudentProfileModal
+          studentId={profileStudentId}
+          onClose={() => setProfileStudentId(null)}
+          onArchived={(id) => {
+            setStudents(prev => prev.filter(s => s._id !== id));
+            setProfileStudentId(null);
+            showT("Étudiant archivé.");
+          }}
+          API={API}
+          safeFetch={safeFetch}
+        />
+      )}
+
+      {/* ✅ TABS ACTIFS / ARCHIVÉS */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        <button onClick={() => setTab("actifs")} style={tabBtnStyle("actifs")}>Actifs</button>
+        <button onClick={() => setTab("archives")} style={tabBtnStyle("archives")}>
+          Archivés {archived.length > 0 && <span style={{ marginLeft:4, background:"rgba(255,255,255,0.3)", borderRadius:10, padding:"1px 6px", fontSize:11 }}>{archived.length}</span>}
+        </button>
       </div>
 
-      <div className="sc-panel">
-        <div className="sc-ph">
-          <div>
-            <span className="sc-pt">Liste des étudiants</span>
-            <span className="sc-ps">{filtered.length} résultats</span>
+      {/* ✅ VUE ARCHIVÉS */}
+      {tab === "archives" && (
+        <div className="sc-panel">
+          <div className="sc-ph">
+            <div><span className="sc-pt">Étudiants archivés</span><span className="sc-ps">{archived.length} archivés</span></div>
           </div>
-          <div style={{ display:"flex", gap:8 }}>
-            {/* Recherche */}
-            <div style={{ display:"flex", alignItems:"center", gap:7, background:"var(--db-bg)", border:"var(--db-border)", borderRadius:9, padding:"7px 12px" }}>
-              <Icon name="search" size={12}/>
-              <input
-                style={{ border:"none", outline:"none", background:"transparent", fontSize:12, color:"var(--db-text)", width:160 }}
-                placeholder="Nom, email…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
-            {/* Filtre niveau */}
-            <select className="sc-select" value={filterLevel} onChange={e => setFilterLevel(e.target.value)}>
-              {levels.map(l => <option key={l}>{l}</option>)}
-            </select>
-            {/* Filtre statut */}
-            <select className="sc-select" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-              <option>Tous</option>
-              <option>Actif</option>
-              <option>En attente</option>
-            </select>
-          </div>
+          {archivedLoading ? (
+            <div className="sc-empty-state">Chargement…</div>
+          ) : (
+            <table className="sc-table">
+              <thead>
+                <tr><th>Nom</th><th>Email</th><th>Téléphone</th><th>Langue</th><th>Niveau</th><th>Date inscription</th><th></th></tr>
+              </thead>
+              <tbody>
+                {archived.length === 0 && (
+                  <tr><td colSpan={7} style={{ textAlign:"center", padding:"2rem", color:"var(--db-text3)", fontSize:13 }}>Aucun étudiant archivé.</td></tr>
+                )}
+                {archived.map(s => {
+                  const name = `${s.prenom || ""} ${s.nom || ""}`.trim();
+                  return (
+                    <tr key={s._id}>
+                      <td><div className="sc-s-cell"><div className="sc-mini-av">{initials(name)}</div><strong>{name}</strong></div></td>
+                      <td style={{ fontSize:12, color:"var(--db-text2)" }}>{s.email || "—"}</td>
+                      <td style={{ fontSize:12, color:"var(--db-text2)" }}>{s.telephone || "—"}</td>
+                      <td style={{ fontSize:12 }}>{s.language || "—"}</td>
+                      <td>{s.level ? <span className={`sc-lvl ${levelCls(s.level)}`}>{s.level}</span> : "—"}</td>
+                      <td style={{ fontSize:12, color:"var(--db-text2)" }}>{s.createdAt ? new Date(s.createdAt).toLocaleDateString("fr-DZ") : "—"}</td>
+                      <td>
+                        <button
+                          style={{ padding:"4px 12px", borderRadius:"var(--db-r,8px)", border:"1px solid #2D7A3A", background:"#E8F5EC", color:"#2D7A3A", fontSize:11, fontWeight:600, cursor:"pointer" }}
+                          onClick={() => restoreStudent(s._id)}
+                        >
+                          Restaurer
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
+      )}
 
-        {loading ? (
-          <div className="sc-empty-state">Chargement…</div>
-        ) : filtered.length === 0 ? (
-          <div className="sc-empty-state">Aucun étudiant trouvé</div>
-        ) : (
-          <table className="sc-table">
-            <thead>
-              <tr>
-                <th>Nom</th>
-                <th>Email</th>
-                <th>Téléphone</th>
-                <th>Section</th>
-                <th>Langue</th>
-                <th>Niveau</th>
-                <th>Absences</th>
-                <th>Statut</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(s => {
-                const name = `${s.prenom || ""} ${s.nom || ""}`.trim();
-                return (
-                  <tr key={s._id}>
-                    <td>
-                      <div className="sc-s-cell">
-                        <div className="sc-mini-av">{initials(name)}</div>
-                        <strong>{name}</strong>
-                      </div>
-                    </td>
-                    <td style={{ fontSize:12, color:"var(--db-text2)" }}>{s.email || "—"}</td>
-                    <td style={{ fontSize:12, color:"var(--db-text2)" }}>{s.telephone || "—"}</td>
-                    <td style={{ fontSize:12 }}>{s.section || "—"}</td>
-                    <td style={{ fontSize:12 }}>{s.language || "—"}</td>
-                    <td>
-                      {s.level
-                        ? <span className={`sc-lvl ${levelCls(s.level)}`}>{s.level}</span>
-                        : <span style={{ fontSize:12, color:"var(--db-text3)" }}>—</span>
-                      }
-                    </td>
-                    <td>
-                      <span style={{
-                        fontSize:12, fontWeight:600,
-                        color: (s.absences||0) >= 8 ? "#C0352A" : (s.absences||0) >= 4 ? "#7A4A0A" : "#2D7A3A"
-                      }}>
-                        {s.absences || 0}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`sc-status ${s.actif ? "sc-st-ok" : "sc-st-pend"}`}>
-                        <span className="sc-dot"/> {s.actif ? "Actif" : "En attente"}
-                      </span>
-                    </td>
+      {/* VUE ACTIFS */}
+      {tab === "actifs" && (
+        <>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, marginBottom:4 }}>
+            {[
+              { lbl:"Total étudiants", val: total,         color:"#1A6CC4" },
+              { lbl:"Actifs",          val: actifs,         color:"#2D7A3A" },
+              { lbl:"En attente",      val: total - actifs, color:"#C0352A" },
+            ].map(c => (
+              <div className="sc-panel" key={c.lbl} style={{ textAlign:"center" }}>
+                <div style={{ fontSize:11, fontWeight:600, color:"var(--db-text3)", textTransform:"uppercase", letterSpacing:".05em", marginBottom:6 }}>{c.lbl}</div>
+                <div style={{ fontFamily:"'Sora',sans-serif", fontSize:28, fontWeight:600, color:c.color }}>{c.val}</div>
+              </div>
+            ))}
+          </div>
+          <div className="sc-panel">
+            <div className="sc-ph">
+              <div><span className="sc-pt">Liste des étudiants</span><span className="sc-ps">{filtered.length} résultats</span></div>
+              <div style={{ display:"flex", gap:8 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:7, background:"var(--db-bg)", border:"var(--db-border)", borderRadius:9, padding:"7px 12px" }}>
+                  <Icon name="search" size={12}/>
+                  <input style={{ border:"none", outline:"none", background:"transparent", fontSize:12, color:"var(--db-text)", width:160 }} placeholder="Nom, email…" value={search} onChange={e => setSearch(e.target.value)}/>
+                </div>
+                <select className="sc-select" value={filterLevel} onChange={e => setFilterLevel(e.target.value)}>
+                  {levels.map(l => <option key={l}>{l}</option>)}
+                </select>
+                <select className="sc-select" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+                  <option>Tous</option><option>Actif</option><option>En attente</option>
+                </select>
+              </div>
+            </div>
+            {loading ? (
+              <div className="sc-empty-state">Chargement…</div>
+            ) : filtered.length === 0 ? (
+              <div className="sc-empty-state">Aucun étudiant trouvé</div>
+            ) : (
+              <table className="sc-table">
+                <thead>
+                  <tr>
+                    <th>Nom</th><th>Email</th><th>Téléphone</th><th>Section</th>
+                    <th>Langue</th><th>Niveau</th><th>Absences</th><th>Statut</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
+                </thead>
+                <tbody>
+                  {filtered.map(s => {
+                    const name = `${s.prenom || ""} ${s.nom || ""}`.trim();
+                    return (
+                      // ✅ ligne cliquable → ouvre le profil
+                      <tr
+                        key={s._id}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => setProfileStudentId(s._id)}
+                      >
+                        <td><div className="sc-s-cell"><div className="sc-mini-av">{initials(name)}</div><strong>{name}</strong></div></td>
+                        <td style={{ fontSize:12, color:"var(--db-text2)" }}>{s.email || "—"}</td>
+                        <td style={{ fontSize:12, color:"var(--db-text2)" }}>{s.telephone || "—"}</td>
+                        <td style={{ fontSize:12 }}>{s.section || "—"}</td>
+                        <td style={{ fontSize:12 }}>{s.language || "—"}</td>
+                        <td>{s.level ? <span className={`sc-lvl ${levelCls(s.level)}`}>{s.level}</span> : <span style={{ fontSize:12, color:"var(--db-text3)" }}>—</span>}</td>
+                        <td><span style={{ fontSize:12, fontWeight:600, color: (s.absences||0) >= 8 ? "#C0352A" : (s.absences||0) >= 4 ? "#7A4A0A" : "#2D7A3A" }}>{s.absences || 0}</span></td>
+                        <td><span className={`sc-status ${s.actif ? "sc-st-ok" : "sc-st-pend"}`}><span className="sc-dot"/> {s.actif ? "Actif" : "En attente"}</span></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </>
+      )}
     </>
   );
 }
-
 /* ══════════════════════════════════════════
-   TEACHERS VIEW
+   TEACHERS VIEW — ✅ onglet Archivés + sans heures/sem
 ══════════════════════════════════════════ */
-function TeachersView({ API, headers, showT }) {
+function TeachersView({ API, safeFetch, showT }) {
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState("");
   const [filterSpec, setFilterSpec] = useState("Toutes");
+  const [tab, setTab] = useState("actifs");
+  const [archived, setArchived] = useState([]);
+  const [archivedLoading, setArchivedLoading] = useState(false);
+
+  const loadArchived = async () => {
+    setArchivedLoading(true);
+    try {
+      const res = await safeFetch(`${API}/users/archived?role=professeur`);
+      if (!res) return;
+      const data = await res.json();
+      if (data.success) setArchived(data.users || []);
+    } catch (err) { console.error(err); }
+    finally { setArchivedLoading(false); }
+  };
+const restoreTeacher = async (id) => {
+  try {
+    const res = await safeFetch(`${API}/users/${id}/restore`, { method: "PATCH" });
+    if (!res) return;
+    const data = await res.json();
+    if (data.success) {
+      setArchived(prev => prev.filter(t => t._id !== id));
+      showT("Enseignant restauré !");
+      // Recharger la liste active
+      const r = await safeFetch(`${API}/users/role/professeur`);
+      if (!r) return;
+      const d = await r.json();
+      if (d.success) setTeachers(d.users);
+    }
+  } catch (err) { console.error(err); }
+};
 
   useEffect(() => {
-    fetch(`${API}/users/role/professeur`, { headers })
-      .then(r => r.json())
+    if (tab === "archives" && archived.length === 0) loadArchived();
+  }, [tab]);
+
+  useEffect(() => {
+    safeFetch(`${API}/users/role/professeur`)
+      .then(r => r?.json())
       .then(data => {
-        if (data.success) setTeachers(data.users);
+        if (data?.success) setTeachers(data.users);
       })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
   }, []);
 
   const specialties = ["Toutes", ...new Set(teachers.map(t => t.specialty).filter(Boolean))];
-
   const filtered = teachers.filter(t => {
     const name = `${t.prenom || ""} ${t.nom || ""}`.toLowerCase();
     const ms   = !search || name.includes(search.toLowerCase()) || t.email?.toLowerCase().includes(search.toLowerCase());
@@ -705,157 +835,200 @@ function TeachersView({ API, headers, showT }) {
   const total  = teachers.length;
   const actifs = teachers.filter(t => t.actif).length;
 
+  const tabBtnStyle = (key) => ({
+    padding: "6px 16px",
+    borderRadius: "var(--db-r,8px)",
+    border: "1px solid var(--db-border,#e5e7eb)",
+    fontSize: 12,
+    fontWeight: tab === key ? 600 : 400,
+    cursor: "pointer",
+    background: tab === key ? "#2D7A3A" : "transparent",
+    color: tab === key ? "#fff" : "var(--db-text2,#666)",
+    transition: "all 0.2s",
+  });
+
   return (
     <>
-      {/* Cartes résumé */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, marginBottom:4 }}>
-        {[
-          { lbl:"Total enseignants", val: total,         color:"#1A6CC4" },
-          { lbl:"Actifs",            val: actifs,         color:"#2D7A3A" },
-          { lbl:"Archivés",          val: total - actifs, color:"#C0352A" },
-        ].map(c => (
-          <div className="sc-panel" key={c.lbl} style={{ textAlign:"center" }}>
-            <div style={{ fontSize:11, fontWeight:600, color:"var(--db-text3)", textTransform:"uppercase", letterSpacing:".05em", marginBottom:6 }}>{c.lbl}</div>
-            <div style={{ fontFamily:"'Sora',sans-serif", fontSize:28, fontWeight:600, color:c.color }}>{c.val}</div>
-          </div>
-        ))}
+      {/* ✅ TABS ACTIFS / ARCHIVÉS */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        <button onClick={() => setTab("actifs")} style={tabBtnStyle("actifs")}>Actifs</button>
+        <button onClick={() => setTab("archives")} style={tabBtnStyle("archives")}>
+          Archivés {archived.length > 0 && <span style={{ marginLeft:4, background:"rgba(255,255,255,0.3)", borderRadius:10, padding:"1px 6px", fontSize:11 }}>{archived.length}</span>}
+        </button>
       </div>
 
-      <div className="sc-panel">
-        <div className="sc-ph">
-          <div>
-            <span className="sc-pt">Liste des enseignants</span>
-            <span className="sc-ps">{filtered.length} résultats</span>
+      {/* ✅ VUE ARCHIVÉS */}
+      {tab === "archives" && (
+        <div className="sc-panel">
+          <div className="sc-ph">
+            <div><span className="sc-pt">Enseignants archivés</span><span className="sc-ps">{archived.length} archivés</span></div>
           </div>
-          <div style={{ display:"flex", gap:8 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:7, background:"var(--db-bg)", border:"var(--db-border)", borderRadius:9, padding:"7px 12px" }}>
-              <Icon name="search" size={12}/>
-              <input
-                style={{ border:"none", outline:"none", background:"transparent", fontSize:12, color:"var(--db-text)", width:160 }}
-                placeholder="Nom, email…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
-            <select className="sc-select" value={filterSpec} onChange={e => setFilterSpec(e.target.value)}>
-              {specialties.map(s => <option key={s}>{s}</option>)}
-            </select>
-          </div>
+          {archivedLoading ? (
+            <div className="sc-empty-state">Chargement…</div>
+          ) : (
+            <table className="sc-table">
+              <thead>
+                <tr><th>Nom</th><th>Email</th><th>Téléphone</th><th>Spécialité</th><th>Date inscription</th><th></th></tr>
+              </thead>
+              <tbody>
+                {archived.length === 0 && (
+                  <tr><td colSpan={6} style={{ textAlign:"center", padding:"2rem", color:"var(--db-text3)", fontSize:13 }}>Aucun enseignant archivé.</td></tr>
+                )}
+                {archived.map(t => {
+                  const name = `${t.prenom || ""} ${t.nom || ""}`.trim();
+                  return (
+                    <tr key={t._id}>
+                      <td><div className="sc-s-cell"><div className="sc-mini-av">{initials(name)}</div><strong>{name}</strong></div></td>
+                      <td style={{ fontSize:12, color:"var(--db-text2)" }}>{t.email || "—"}</td>
+                      <td style={{ fontSize:12, color:"var(--db-text2)" }}>{t.telephone || "—"}</td>
+                      <td style={{ fontSize:12 }}>{t.specialty || "—"}</td>
+                      <td style={{ fontSize:12, color:"var(--db-text2)" }}>{t.createdAt ? new Date(t.createdAt).toLocaleDateString("fr-DZ") : "—"}</td>
+                      <td>
+                        <button
+                          style={{ padding:"4px 12px", borderRadius:"var(--db-r,8px)", border:"1px solid #2D7A3A", background:"#E8F5EC", color:"#2D7A3A", fontSize:11, fontWeight:600, cursor:"pointer" }}
+                          onClick={() => restoreTeacher(t._id)}
+                        >
+                          Restaurer
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
+      )}
 
-        {loading ? (
-          <div className="sc-empty-state">Chargement…</div>
-        ) : filtered.length === 0 ? (
-          <div className="sc-empty-state">Aucun enseignant trouvé</div>
-        ) : (
-          <table className="sc-table">
-            <thead>
-              <tr>
-                <th>Nom</th>
-                <th>Email</th>
-                <th>Téléphone</th>
-                <th>Spécialité</th>
-                <th>Heures/sem</th>
-                <th>Inscrit le</th>
-                <th>Statut</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(t => {
-                const name = `${t.prenom || ""} ${t.nom || ""}`.trim();
-                const date = t.createdAt
-                  ? new Date(t.createdAt).toLocaleDateString("fr-DZ")
-                  : "—";
-                return (
-                  <tr key={t._id}>
-                    <td>
-                      <div className="sc-s-cell">
-                        <div className="sc-mini-av">{initials(name)}</div>
-                        <strong>{name}</strong>
-                      </div>
-                    </td>
-                    <td style={{ fontSize:12, color:"var(--db-text2)" }}>{t.email || "—"}</td>
-                    <td style={{ fontSize:12, color:"var(--db-text2)" }}>{t.telephone || "—"}</td>
-                    <td style={{ fontSize:12 }}>{t.specialty || "—"}</td>
-                    <td style={{ fontSize:12, textAlign:"center" }}>{t.hours || "—"}</td>
-                    <td style={{ fontSize:12, color:"var(--db-text2)" }}>{date}</td>
-                    <td>
-                      <span className={`sc-status ${t.actif ? "sc-st-ok" : "sc-st-err"}`}>
-                        <span className="sc-dot"/> {t.actif ? "Actif" : "Archivé"}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {/* VUE ACTIFS — ✅ sans colonne Heures/sem */}
+      {tab === "actifs" && (
+        <>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, marginBottom:4 }}>
+            {[
+              { lbl:"Total enseignants", val: total,         color:"#1A6CC4" },
+              { lbl:"Actifs",            val: actifs,         color:"#2D7A3A" },
+              { lbl:"Archivés",          val: total - actifs, color:"#C0352A" },
+            ].map(c => (
+              <div className="sc-panel" key={c.lbl} style={{ textAlign:"center" }}>
+                <div style={{ fontSize:11, fontWeight:600, color:"var(--db-text3)", textTransform:"uppercase", letterSpacing:".05em", marginBottom:6 }}>{c.lbl}</div>
+                <div style={{ fontFamily:"'Sora',sans-serif", fontSize:28, fontWeight:600, color:c.color }}>{c.val}</div>
+              </div>
+            ))}
+          </div>
+          <div className="sc-panel">
+            <div className="sc-ph">
+              <div><span className="sc-pt">Liste des enseignants</span><span className="sc-ps">{filtered.length} résultats</span></div>
+              <div style={{ display:"flex", gap:8 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:7, background:"var(--db-bg)", border:"var(--db-border)", borderRadius:9, padding:"7px 12px" }}>
+                  <Icon name="search" size={12}/>
+                  <input style={{ border:"none", outline:"none", background:"transparent", fontSize:12, color:"var(--db-text)", width:160 }} placeholder="Nom, email…" value={search} onChange={e => setSearch(e.target.value)}/>
+                </div>
+                <select className="sc-select" value={filterSpec} onChange={e => setFilterSpec(e.target.value)}>
+                  {specialties.map(s => <option key={s}>{s}</option>)}
+                </select>
+              </div>
+            </div>
+            {loading ? (
+              <div className="sc-empty-state">Chargement…</div>
+            ) : filtered.length === 0 ? (
+              <div className="sc-empty-state">Aucun enseignant trouvé</div>
+            ) : (
+              <table className="sc-table">
+                {/* ✅ Colonne Heures/sem supprimée */}
+                <thead><tr><th>Nom</th><th>Email</th><th>Téléphone</th><th>Spécialité</th><th>Date inscription</th><th>Statut</th></tr></thead>
+                <tbody>
+                  {filtered.map(t => {
+                    const name = `${t.prenom || ""} ${t.nom || ""}`.trim();
+                    const date = t.createdAt ? new Date(t.createdAt).toLocaleDateString("fr-DZ") : "—";
+                    return (
+                      <tr key={t._id}>
+                        <td><div className="sc-s-cell"><div className="sc-mini-av">{initials(name)}</div><strong>{name}</strong></div></td>
+                        <td style={{ fontSize:12, color:"var(--db-text2)" }}>{t.email || "—"}</td>
+                        <td style={{ fontSize:12, color:"var(--db-text2)" }}>{t.telephone || "—"}</td>
+                        <td style={{ fontSize:12 }}>{t.specialty || "—"}</td>
+                        <td style={{ fontSize:12, color:"var(--db-text2)" }}>{date}</td>
+                        <td><span className={`sc-status ${t.actif ? "sc-st-ok" : "sc-st-err"}`}><span className="sc-dot"/> {t.actif ? "Actif" : "Archivé"}</span></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </>
+      )}
     </>
   );
 }
 
 /* ══════════════════════════════════════════
-   SECTIONS VIEW — connecté au backend
+   SECTIONS VIEW — ✅ voir étudiants par section
 ══════════════════════════════════════════ */
-function SectionsView({ sections, setSections, API, headers, showT }) {
+function SectionsView({ sections, setSections, API, safeFetch, showT }) {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ name:"", language:"English", level:"A1", capacity:12, teacher:"", teacherId:"", time:"", room:"" });
   const [availableTeachers, setAvailableTeachers] = useState([]);
+
+  /* ✅ ÉTATS MODAL ÉTUDIANTS PAR SECTION */
+  const [sectionStudentsModal, setSectionStudentsModal] = useState(null);
+  const [sectionStudentsList, setSectionStudentsList] = useState([]);
+  const [sectionStudentsLoading, setSectionStudentsLoading] = useState(false);
+
+  const openSectionStudents = async (section) => {
+    setSectionStudentsModal(section);
+    setSectionStudentsList([]);
+    setSectionStudentsLoading(true);
+    try {
+      const res = await safeFetch(`${API}/sections/${section.id}/students`);
+      if (!res) return;
+      const data = await res.json();
+      if (data.success) setSectionStudentsList(data.students || []);
+    } catch (err) { console.error(err); }
+    finally { setSectionStudentsLoading(false); }
+  };
+
   const [availableRooms] = useState([
-    "A101", "A102", "A103", "A104",
-    "B101", "B102", "B103", "B104",
-    "C101", "C102", "C201", "C202",
-    "Salle Info 1", "Salle Info 2", "Amphi A", "Amphi B",
+    "A101","A102","A103","A104","B101","B102","B103","B104",
+    "C101","C102","C201","C202","Salle Info 1","Salle Info 2","Amphi A","Amphi B",
   ]);
   const [availableSlots] = useState([
-    "Lun 08h00–09h30", "Lun 09h45–11h15", "Lun 11h30–13h00",
-    "Lun 14h00–15h30", "Lun 15h45–17h15",
-    "Mar 08h00–09h30", "Mar 09h45–11h15", "Mar 11h30–13h00",
-    "Mar 14h00–15h30", "Mar 15h45–17h15",
-    "Mer 08h00–09h30", "Mer 09h45–11h15", "Mer 11h30–13h00",
-    "Mer 14h00–15h30", "Mer 15h45–17h15",
-    "Jeu 08h00–09h30", "Jeu 09h45–11h15", "Jeu 11h30–13h00",
-    "Jeu 14h00–15h30", "Jeu 15h45–17h15",
-    "Ven 08h00–09h30", "Ven 09h45–11h15", "Ven 11h30–13h00",
-    "Ven 14h00–15h30", "Ven 15h45–17h15",
-    "Sam 08h00–09h30", "Sam 09h45–11h15", "Sam 11h30–13h00",
-    "Lun/Mer 08h00–09h30", "Lun/Mer 09h45–11h15", "Lun/Mer 14h00–15h30",
-    "Mar/Jeu 08h00–09h30", "Mar/Jeu 09h45–11h15", "Mar/Jeu 14h00–15h30",
-    "Mer/Ven 08h00–09h30", "Mer/Ven 09h45–11h15", "Mer/Ven 14h00–15h30",
+    "Lun 08h00–09h30","Lun 09h45–11h15","Lun 11h30–13h00","Lun 14h00–15h30","Lun 15h45–17h15",
+    "Mar 08h00–09h30","Mar 09h45–11h15","Mar 11h30–13h00","Mar 14h00–15h30","Mar 15h45–17h15",
+    "Mer 08h00–09h30","Mer 09h45–11h15","Mer 11h30–13h00","Mer 14h00–15h30","Mer 15h45–17h15",
+    "Jeu 08h00–09h30","Jeu 09h45–11h15","Jeu 11h30–13h00","Jeu 14h00–15h30","Jeu 15h45–17h15",
+    "Ven 08h00–09h30","Ven 09h45–11h15","Ven 11h30–13h00","Ven 14h00–15h30","Ven 15h45–17h15",
+    "Sam 08h00–09h30","Sam 09h45–11h15","Sam 11h30–13h00",
+    "Lun/Mer 08h00–09h30","Lun/Mer 09h45–11h15","Lun/Mer 14h00–15h30",
+    "Mar/Jeu 08h00–09h30","Mar/Jeu 09h45–11h15","Mar/Jeu 14h00–15h30",
+    "Mer/Ven 08h00–09h30","Mer/Ven 09h45–11h15","Mer/Ven 14h00–15h30",
   ]);
 
-  // Charger les enseignants disponibles depuis le backend
   useEffect(() => {
-    fetch(`${API}/users/role/professeur`, { headers })
-      .then(r => r.json())
+    safeFetch(`${API}/users/role/professeur`)
+      .then(r => r?.json())
       .then(data => {
-        if (data.success) {
+        if (data?.success) {
           setAvailableTeachers(
-            (data.users || data.teachers || [])
+            (data.users || [])
               .filter(t => t.actif !== false)
-              .map(t => ({
-                id: t._id,
-                name: `${t.prenom || ""} ${t.nom || ""}`.trim(),
-              }))
+              .map(t => ({ id: t._id, name: `${t.prenom || ""} ${t.nom || ""}`.trim() }))
           );
         }
       })
       .catch(err => console.error("Erreur chargement enseignants:", err));
   }, []);
 
-  // Salles déjà utilisées dans les sections existantes
   const usedRooms = sections.map(s => s.room).filter(Boolean);
-  // Créneaux déjà utilisés
   const usedSlots = sections.map(s => s.time).filter(Boolean);
 
   const addSection = async () => {
     if (!form.name || !form.teacher) return;
     try {
-      const res = await fetch(`${API}/secretaire/sections`, {
-        method: "POST", headers,
+      const res = await safeFetch(`${API}/secretaire/sections`, {
+        method: "POST",
         body: JSON.stringify({ ...form, capacity: parseInt(form.capacity) }),
       });
+      if (!res) return;
       const data = await res.json();
       if (data.success) {
         setSections(ss => [...ss, {
@@ -872,7 +1045,8 @@ function SectionsView({ sections, setSections, API, headers, showT }) {
 
   const deleteSection = async (id, name) => {
     try {
-      const res = await fetch(`${API}/secretaire/sections/${id}`, { method:"DELETE", headers });
+      const res = await safeFetch(`${API}/secretaire/sections/${id}`, { method:"DELETE" });
+      if (!res) return;
       const data = await res.json();
       if (data.success) { setSections(ss => ss.filter(s => s.id !== id && s.name !== name)); showT("Section supprimée."); }
     } catch (err) { console.error(err); }
@@ -887,113 +1061,55 @@ function SectionsView({ sections, setSections, API, headers, showT }) {
 
       {showAdd && (
         <div style={{ background:"var(--db-bg)", border:"var(--db-border)", borderRadius:"var(--db-r)", padding:16, marginBottom:16, display:"flex", flexDirection:"column", gap:12 }}>
-          
-          {/* Ligne 1 : Nom + Langue */}
           <div className="sc-form-row">
-            <div className="sc-field">
-              <label>Nom section</label>
-              <input className="sc-input" placeholder="Section F" value={form.name} onChange={e => setForm(f=>({...f, name:e.target.value}))}/>
-            </div>
-            <div className="sc-field">
-              <label>Langue</label>
+            <div className="sc-field"><label>Nom section</label><input className="sc-input" placeholder="Section F" value={form.name} onChange={e => setForm(f=>({...f, name:e.target.value}))}/></div>
+            <div className="sc-field"><label>Langue</label>
               <select className="sc-select" style={{ width:"100%" }} value={form.language} onChange={e => setForm(f=>({...f, language:e.target.value}))}>
                 {["English","French","Spanish","German","Mandarin","Arabe","Russe"].map(l=><option key={l}>{l}</option>)}
               </select>
             </div>
           </div>
-
-          {/* Ligne 2 : Niveau + Capacité */}
           <div className="sc-form-row">
-            <div className="sc-field">
-              <label>Niveau</label>
+            <div className="sc-field"><label>Niveau</label>
               <select className="sc-select" style={{ width:"100%" }} value={form.level} onChange={e => setForm(f=>({...f, level:e.target.value}))}>
                 {["A1","A2","B1","B2","C1","C2"].map(l=><option key={l}>{l}</option>)}
               </select>
             </div>
-            <div className="sc-field">
-              <label>Capacité</label>
-              <input className="sc-input" type="number" min={1} max={40} value={form.capacity} onChange={e => setForm(f=>({...f, capacity:e.target.value}))}/>
-            </div>
+            <div className="sc-field"><label>Capacité</label><input className="sc-input" type="number" min={1} max={40} value={form.capacity} onChange={e => setForm(f=>({...f, capacity:e.target.value}))}/></div>
           </div>
-
-          {/* Ligne 3 : Enseignant (select dynamique) */}
-          <div className="sc-field">
-            <label>Enseignant disponible</label>
-            <select
-              className="sc-select"
-              style={{ width:"100%" }}
-              value={form.teacherId}
-              onChange={e => {
-                const t = availableTeachers.find(t => t.id === e.target.value);
-                setForm(f=>({...f, teacherId: e.target.value, teacher: t?.name || ""}));
-              }}
-            >
+          <div className="sc-field"><label>Enseignant disponible</label>
+            <select className="sc-select" style={{ width:"100%" }} value={form.teacherId} onChange={e => {
+              const t = availableTeachers.find(t => t.id === e.target.value);
+              setForm(f=>({...f, teacherId: e.target.value, teacher: t?.name || ""}));
+            }}>
               <option value="">— Choisir un enseignant —</option>
-              {availableTeachers.length === 0 && (
-                <option disabled>Aucun enseignant disponible</option>
-              )}
-              {availableTeachers.map(t => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
+              {availableTeachers.length === 0 && <option disabled>Aucun enseignant disponible</option>}
+              {availableTeachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
-
-          {/* Ligne 4 : Salle (select) */}
-          <div className="sc-field">
-            <label>Salle disponible</label>
-            <select
-              className="sc-select"
-              style={{ width:"100%" }}
-              value={form.room}
-              onChange={e => setForm(f=>({...f, room:e.target.value}))}
-            >
+          <div className="sc-field"><label>Salle disponible</label>
+            <select className="sc-select" style={{ width:"100%" }} value={form.room} onChange={e => setForm(f=>({...f, room:e.target.value}))}>
               <option value="">— Choisir une salle —</option>
               {availableRooms.map(r => (
-                <option
-                  key={r}
-                  value={r}
-                  disabled={usedRooms.includes(r)}
-                  style={{ color: usedRooms.includes(r) ? "#aaa" : "inherit" }}
-                >
+                <option key={r} value={r} disabled={usedRooms.includes(r)} style={{ color: usedRooms.includes(r) ? "#aaa" : "inherit" }}>
                   {r}{usedRooms.includes(r) ? " — occupée" : ""}
                 </option>
               ))}
             </select>
           </div>
-
-          {/* Ligne 5 : Horaire (select) */}
-          <div className="sc-field">
-            <label>Créneau horaire</label>
-            <select
-              className="sc-select"
-              style={{ width:"100%" }}
-              value={form.time}
-              onChange={e => setForm(f=>({...f, time:e.target.value}))}
-            >
+          <div className="sc-field"><label>Créneau horaire</label>
+            <select className="sc-select" style={{ width:"100%" }} value={form.time} onChange={e => setForm(f=>({...f, time:e.target.value}))}>
               <option value="">— Choisir un créneau —</option>
               {availableSlots.map(slot => (
-                <option
-                  key={slot}
-                  value={slot}
-                  disabled={usedSlots.includes(slot)}
-                  style={{ color: usedSlots.includes(slot) ? "#aaa" : "inherit" }}
-                >
+                <option key={slot} value={slot} disabled={usedSlots.includes(slot)} style={{ color: usedSlots.includes(slot) ? "#aaa" : "inherit" }}>
                   {slot}{usedSlots.includes(slot) ? " — déjà utilisé" : ""}
                 </option>
               ))}
             </select>
           </div>
-
           <div style={{ display:"flex", gap:8, justifyContent:"flex-end" }}>
-            <button className="sc-btn-ghost" onClick={() => { setShowAdd(false); setForm({ name:"", language:"English", level:"A1", capacity:12, teacher:"", teacherId:"", time:"", room:"" }); }}>
-              Annuler
-            </button>
-            <button
-              className="sc-btn-primary"
-              onClick={addSection}
-              disabled={!form.name || !form.teacher || !form.room || !form.time}
-              style={{ opacity: (!form.name || !form.teacher || !form.room || !form.time) ? 0.5 : 1 }}
-            >
+            <button className="sc-btn-ghost" onClick={() => { setShowAdd(false); setForm({ name:"", language:"English", level:"A1", capacity:12, teacher:"", teacherId:"", time:"", room:"" }); }}>Annuler</button>
+            <button className="sc-btn-primary" onClick={addSection} disabled={!form.name || !form.teacher || !form.room || !form.time} style={{ opacity: (!form.name || !form.teacher || !form.room || !form.time) ? 0.5 : 1 }}>
               <Icon name="check" size={13}/> Créer
             </button>
           </div>
@@ -1017,19 +1133,87 @@ function SectionsView({ sections, setSections, API, headers, showT }) {
               </td>
               <td className="sc-date-cell">{s.time}</td>
               <td style={{ fontSize:12, color:"var(--db-text2)" }}>{s.room || "—"}</td>
-              <td><button className="sc-icon-row-btn" onClick={() => deleteSection(s.id, s.name)}><Icon name="trash" size={13}/></button></td>
+              {/* ✅ BOUTONS : voir étudiants + supprimer */}
+              <td>
+                <div style={{ display:"flex", gap:4, alignItems:"center" }}>
+                  <button
+                    title="Voir les étudiants"
+                    style={{ display:"flex", alignItems:"center", gap:4, padding:"3px 10px", borderRadius:"var(--db-r,8px)", border:"1px solid #1A6CC440", background:"#EBF4FF", color:"#1A6CC4", fontSize:11, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" }}
+                    onClick={() => openSectionStudents(s)}
+                  >
+                    <Icon name="users" size={11}/> {s.students}
+                  </button>
+                  <button className="sc-icon-row-btn" onClick={() => deleteSection(s.id, s.name)}><Icon name="trash" size={13}/></button>
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      {/* ✅ MODAL ÉTUDIANTS PAR SECTION */}
+      {sectionStudentsModal && (
+        <div
+          style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.35)", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }}
+          onClick={e => e.target === e.currentTarget && setSectionStudentsModal(null)}
+        >
+          <div style={{ background:"var(--db-card,#fff)", borderRadius:"var(--db-r,8px)", boxShadow:"0 8px 32px rgba(0,0,0,0.18)", width:"100%", maxWidth:520, overflow:"hidden" }}>
+            {/* Header */}
+            <div style={{ padding:"16px 20px", borderBottom:"1px solid var(--db-border,#e5e7eb)", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+              <div>
+                <div style={{ fontWeight:600, fontSize:14, color:"var(--db-text)" }}>{sectionStudentsModal.name}</div>
+                <div style={{ fontSize:12, color:"var(--db-text2)", marginTop:2 }}>
+                  {sectionStudentsModal.language} · {sectionStudentsModal.level} · {sectionStudentsModal.students}/{sectionStudentsModal.capacity} étudiants
+                </div>
+                <div style={{ fontSize:11, color:"var(--db-text3)", marginTop:4, display:"flex", gap:10 }}>
+                  <span>👤 {sectionStudentsModal.teacher}</span>
+                  <span>📅 {sectionStudentsModal.time}</span>
+                  <span>🚪 {sectionStudentsModal.room}</span>
+                </div>
+              </div>
+              <button style={{ background:"none", border:"none", cursor:"pointer", fontSize:18, color:"var(--db-text3)", lineHeight:1 }} onClick={() => setSectionStudentsModal(null)}>✕</button>
+            </div>
+            {/* Body */}
+            <div style={{ maxHeight:360, overflowY:"auto" }}>
+              {sectionStudentsLoading ? (
+                <div className="sc-empty-state">Chargement…</div>
+              ) : sectionStudentsList.length === 0 ? (
+                <div className="sc-empty-state">Aucun étudiant inscrit dans cette section.</div>
+              ) : (
+                <table className="sc-table">
+                  <thead><tr><th>Nom</th><th>Niveau</th><th>Téléphone</th><th>Absences</th><th>Statut</th></tr></thead>
+                  <tbody>
+                    {sectionStudentsList.map(s => {
+                      const name = `${s.prenom || ""} ${s.nom || ""}`.trim() || s.email;
+                      return (
+                        <tr key={s._id || s.id}>
+                          <td><div className="sc-s-cell"><div className="sc-mini-av">{initials(name)}</div><strong>{name}</strong></div></td>
+                          <td>{s.level ? <span className={`sc-lvl ${levelCls(s.level)}`}>{s.level}</span> : "—"}</td>
+                          <td style={{ fontSize:12, color:"var(--db-text2)" }}>{s.telephone || "—"}</td>
+                          <td><span style={{ fontSize:12, fontWeight:600, color:(s.absences||0)>=8?"#C0352A":(s.absences||0)>=4?"#7A4A0A":"#2D7A3A" }}>{s.absences||0}</span></td>
+                          <td><span className={`sc-status ${s.actif?"sc-st-ok":"sc-st-pend"}`}><span className="sc-dot"/> {s.actif?"Actif":"En attente"}</span></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            {/* Footer */}
+            <div style={{ padding:"12px 20px", borderTop:"1px solid var(--db-border,#e5e7eb)", display:"flex", justifyContent:"flex-end" }}>
+              <button className="sc-btn-ghost" onClick={() => setSectionStudentsModal(null)}>Fermer</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 /* ══════════════════════════════════════════
-   TIMETABLE VIEW — connecté au backend
+   TIMETABLE VIEW
 ══════════════════════════════════════════ */
-function TimetableView({ API, headers, sections, showT }) {
+function TimetableView({ API, safeFetch, sections, showT }) {
   const [offset, setOffset]   = useState(0);
   const [rows, setRows]       = useState([]);
   const [loading, setLoading] = useState(false);
@@ -1037,13 +1221,15 @@ function TimetableView({ API, headers, sections, showT }) {
   const [form, setForm] = useState({ section:"", subject:"", teacher:"", room:"", startTime:"08h00", endTime:"09h30" });
 
   const d = new Date(); d.setDate(d.getDate() + offset);
-  const di = d.getDay();
+const rawDay = d.getDay();
+const di = rawDay === 0 ? 6 : rawDay - 1;
   const label = offset===0?"Aujourd'hui":offset===-1?"Hier":offset===1?"Demain":DAYS_FR[di];
 
   const loadTimetable = async () => {
     setLoading(true);
     try {
-      const res  = await fetch(`${API}/secretaire/timetable?day=${di}`, { headers });
+      const res  = await safeFetch(`${API}/secretaire/timetable?day=${di}`);
+      if (!res) return;
       const data = await res.json();
       if (data.success) setRows(data.timetable);
     } catch (err) { console.error(err); }
@@ -1055,10 +1241,11 @@ function TimetableView({ API, headers, sections, showT }) {
   const addEntry = async () => {
     if (!form.room || !form.startTime || !form.endTime) return;
     try {
-      const res  = await fetch(`${API}/secretaire/timetable`, {
-        method:"POST", headers,
+      const res  = await safeFetch(`${API}/secretaire/timetable`, {
+        method:"POST",
         body: JSON.stringify({ ...form, dayOfWeek: di }),
       });
+      if (!res) return;
       const data = await res.json();
       if (data.success) { await loadTimetable(); setShowAdd(false); showT("Créneau ajouté."); }
     } catch (err) { console.error(err); }
@@ -1066,7 +1253,8 @@ function TimetableView({ API, headers, sections, showT }) {
 
   const deleteEntry = async (id) => {
     try {
-      const res  = await fetch(`${API}/secretaire/timetable/${id}`, { method:"DELETE", headers });
+      const res  = await safeFetch(`${API}/secretaire/timetable/${id}`, { method:"DELETE" });
+      if (!res) return;
       const data = await res.json();
       if (data.success) { setRows(rs => rs.filter(r => r.id !== id)); showT("Créneau supprimé."); }
     } catch (err) { console.error(err); }
@@ -1083,7 +1271,6 @@ function TimetableView({ API, headers, sections, showT }) {
           <button className="sc-btn-primary sc-btn-sm" onClick={() => setShowAdd(v=>!v)}><Icon name="plus" size={13}/> Ajouter</button>
         </div>
       </div>
-
       {showAdd && (
         <div style={{ background:"var(--db-bg)", border:"var(--db-border)", borderRadius:"var(--db-r)", padding:16, marginBottom:16, display:"flex", flexDirection:"column", gap:12 }}>
           <div className="sc-form-row">
@@ -1109,7 +1296,6 @@ function TimetableView({ API, headers, sections, showT }) {
           </div>
         </div>
       )}
-
       {loading && <div className="sc-empty-state">Chargement…</div>}
       {!loading && rows.length === 0 && <div className="sc-empty-state">Aucun cours prévu pour {DAYS_FR[di]}</div>}
       {!loading && rows.map((r) => (
@@ -1127,10 +1313,327 @@ function TimetableView({ API, headers, sections, showT }) {
   );
 }
 
+
+/* ══════════════════════════════════════════
+   STUDENT PROFILE MODAL (shared)
+══════════════════════════════════════════ */
+function StudentProfileModal({ studentId, onClose, onArchived, API, safeFetch }) {
+  const [student, setStudent] = useState(null);
+  const [sections, setSections] = useState([]);
+  const [classmates, setClassmates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("info");
+  const [confirm, setConfirm] = useState(false);
+
+  useEffect(() => {
+    if (!studentId) return;
+    setLoading(true);
+    const fetchFn = (path) =>
+      safeFetch(`${API}${path}`).then(r => r?.json());
+
+    const load = async () => {
+      try {
+        const [profileData, sectionsData] = await Promise.all([
+          fetchFn(`/users/${studentId}/profile`),
+          fetchFn(`/users/${studentId}/sections`),
+        ]);
+        if (profileData?.success) setStudent(profileData.student);
+        if (sectionsData?.success) {
+          setSections(sectionsData.sections || []);
+          if (sectionsData.sections?.length > 0) {
+            const cm = await fetchFn(`/sections/${sectionsData.sections[0].id}/students`);
+            if (cm?.success)
+              setClassmates((cm.students || []).filter(s => (s._id || s.id) !== studentId));
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [studentId]);
+
+  const handleArchive = async () => {
+    try {
+      const res = await safeFetch(`${API}/users/${studentId}/archive`, { method: "PATCH" });
+      const data = await res?.json();
+      if (data?.success) {
+        if (onArchived) onArchived(studentId);
+        onClose();
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const ini = name =>
+    (name || "??").split(" ").map(n => n[0]).filter(Boolean).join("").slice(0, 2).toUpperCase();
+  const lvCls = lvl => {
+    const c = (lvl?.[0] || "a").toLowerCase();
+    return c === "a" ? "db-lv-a" : c === "b" ? "db-lv-b" : "db-lv-c";
+  };
+  const fmtDate = d =>
+    d ? new Date(d).toLocaleDateString("fr-DZ", { day: "numeric", month: "short", year: "numeric" }) : "—";
+
+  const TABS = [
+    { key: "info", label: "Infos" },
+    { key: "courses", label: "Cours" },
+    { key: "classmates", label: "Camarades" },
+  ];
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
+        zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+      }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div style={{
+        background: "var(--db-card,#fff)", borderRadius: "var(--db-r,12px)",
+        boxShadow: "0 16px 48px rgba(0,0,0,0.18)", width: "100%", maxWidth: 520,
+        maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column",
+      }}>
+        {/* Header */}
+        <div style={{ padding: "20px 20px 0", borderBottom: "1px solid var(--db-border,#e5e7eb)" }}>
+          {loading ? (
+            <div style={{ padding: "24px 0", textAlign: "center", color: "var(--db-text3)", fontSize: 13 }}>
+              Chargement…
+            </div>
+          ) : student ? (
+            <>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 16 }}>
+                <div style={{
+                  width: 56, height: 56, borderRadius: "50%",
+                  background: "linear-gradient(135deg,#1A6CC4,#185FA5)",
+                  color: "#fff", display: "flex", alignItems: "center",
+                  justifyContent: "center", fontSize: 18, fontWeight: 700, flexShrink: 0,
+                }}>
+                  {ini(student.name)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 16, color: "var(--db-text,#111)", marginBottom: 4 }}>
+                    {student.name}
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                    {student.level && (
+                      <span className={`sc-lvl ${lvCls(student.level)}`}>{student.level}</span>
+                    )}
+                    <span style={{
+                      fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 20,
+                      background: student.status === "active" ? "#EAF3DE" : "#FAEEDA",
+                      color: student.status === "active" ? "#2D7A3A" : "#633806",
+                    }}>
+                      <span style={{
+                        display: "inline-block", width: 6, height: 6, borderRadius: "50%",
+                        marginRight: 4, verticalAlign: "middle",
+                        background: student.status === "active" ? "#2D7A3A" : "#B45309",
+                      }} />
+                      {student.status === "active" ? "Actif" : "En attente"}
+                    </span>
+                  </div>
+                </div>
+                {/* Bouton archiver */}
+                <button
+                  title="Archiver"
+                  onClick={() => setConfirm(true)}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    color: "var(--db-text3)", padding: 6, borderRadius: 8, transition: "all .2s", flexShrink: 0,
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.color = "#C0352A"; e.currentTarget.style.background = "#FCEBEB"; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = "var(--db-text3)"; e.currentTarget.style.background = "none"; }}
+                >
+                  <Icon name="trash" size={15} />
+                </button>
+                <button
+                  onClick={onClose}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--db-text3)", fontSize: 18, lineHeight: 1, padding: 4, flexShrink: 0 }}
+                >✕</button>
+              </div>
+              {/* Tabs */}
+              <div style={{ display: "flex" }}>
+                {TABS.map(t => (
+                  <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
+                    padding: "8px 16px", fontSize: 13,
+                    fontWeight: activeTab === t.key ? 600 : 400,
+                    color: activeTab === t.key ? "#1A6CC4" : "var(--db-text2,#6b7280)",
+                    background: "none", border: "none", cursor: "pointer",
+                    borderBottom: activeTab === t.key ? "2px solid #1A6CC4" : "2px solid transparent",
+                    transition: "all .15s",
+                  }}>{t.label}</button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div style={{ padding: "16px 0", textAlign: "center", color: "var(--db-text3)", fontSize: 13 }}>
+              Étudiant introuvable.
+            </div>
+          )}
+        </div>
+
+        {/* Body */}
+        {!loading && student && (
+          <div style={{ overflowY: "auto", padding: "16px 20px", flex: 1 }}>
+
+            {/* Info */}
+            {activeTab === "info" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {[
+                  ["Email",        student.email    || "—"],
+                  ["Téléphone",    student.phone    || "—"],
+                  ["Langue",       student.language || "—"],
+                  ["Niveau",       student.level    || "—"],
+                  ["Horaire",      student.schedule || "—"],
+                  ["Absences",     student.absences ?? 0],
+                  ["Inscrit le",   fmtDate(student.createdAt)],
+                  ["Notes",        student.notes    || "—"],
+                ].map(([label, value]) => (
+                  <div key={label} style={{
+                    display: "flex", alignItems: "center", gap: 12,
+                    padding: "9px 12px",
+                    background: "var(--db-bg,#f9fafb)",
+                    borderRadius: "var(--db-r,8px)",
+                  }}>
+                    <span style={{ fontSize: 12, color: "var(--db-text3)", minWidth: 90, fontWeight: 500 }}>
+                      {label}
+                    </span>
+                    <span style={{
+                      fontSize: 13,
+                      fontWeight: label === "Absences" ? 700 : 400,
+                      color: label === "Absences"
+                        ? (student.absences >= 8 ? "#C0352A" : student.absences >= 4 ? "#7A4A0A" : "#2D7A3A")
+                        : "var(--db-text,#111)",
+                    }}>
+                      {String(value)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Cours */}
+            {activeTab === "courses" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {sections.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "2rem", color: "var(--db-text3)", fontSize: 13 }}>
+                    Aucune section assignée.
+                  </div>
+                ) : sections.map(sec => (
+                  <div key={sec.id} style={{
+                    padding: "12px 14px",
+                    background: "var(--db-bg,#f9fafb)",
+                    border: "1px solid var(--db-border,#e5e7eb)",
+                    borderLeft: "3px solid #1A6CC4",
+                    borderRadius: "var(--db-r,8px)",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <span style={{ fontWeight: 700, fontSize: 13 }}>{sec.name}</span>
+                      <span className={`sc-lvl ${lvCls(sec.level)}`}>{sec.level}</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+                      {[["Langue", sec.language], ["Enseignant", sec.teacher], ["Horaire", sec.time], ["Salle", sec.room]].map(([k, v]) => (
+                        <div key={k} style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                          <span style={{ fontSize: 10, color: "var(--db-text3)", textTransform: "uppercase", letterSpacing: ".04em" }}>{k}</span>
+                          <span style={{ fontSize: 12, fontWeight: 500, color: "var(--db-text)" }}>{v || "—"}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Camarades */}
+            {activeTab === "classmates" && (
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {classmates.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "2rem", color: "var(--db-text3)", fontSize: 13 }}>
+                    Aucun camarade trouvé.
+                  </div>
+                ) : classmates.map((c, idx) => {
+                  const name = `${c.prenom || ""} ${c.nom || ""}`.trim() || c.email;
+                  return (
+                    <div key={c._id || idx} style={{
+                      display: "flex", alignItems: "center", gap: 10, padding: "10px 0",
+                      borderBottom: idx < classmates.length - 1 ? "1px solid var(--db-border,#e5e7eb)" : "none",
+                    }}>
+                      <div style={{
+                        width: 34, height: 34, borderRadius: "50%",
+                        background: "linear-gradient(135deg,#1A6CC4,#185FA5)",
+                        color: "#fff", display: "flex", alignItems: "center",
+                        justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0,
+                      }}>
+                        {ini(name)}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--db-text)" }}>{name}</div>
+                        <div style={{ fontSize: 11, color: "var(--db-text3)" }}>
+                          Inscrit le {fmtDate(c.createdAt)}
+                        </div>
+                      </div>
+                      <span style={{
+                        fontSize: 10.5, fontWeight: 600, padding: "2px 8px", borderRadius: 20,
+                        background: c.actif ? "#EAF3DE" : "#FAEEDA",
+                        color: c.actif ? "#2D7A3A" : "#633806",
+                      }}>
+                        {c.actif ? "Actif" : "En attente"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Footer */}
+        {!loading && student && (
+          <div style={{
+            padding: "12px 20px", borderTop: "1px solid var(--db-border,#e5e7eb)",
+            display: "flex", justifyContent: "flex-end",
+          }}>
+            <button onClick={onClose} style={{
+              padding: "7px 18px", borderRadius: "var(--db-r,8px)", fontSize: 13,
+              fontWeight: 500, cursor: "pointer",
+              background: "var(--db-bg,#f3f4f6)", color: "var(--db-text2,#6b7280)",
+              border: "1px solid var(--db-border,#e5e7eb)",
+            }}>
+              Fermer
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Confirm archive */}
+      {confirm && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={e => e.target === e.currentTarget && setConfirm(false)}
+        >
+          <div style={{ background: "var(--db-card,#fff)", borderRadius: "var(--db-r,12px)", padding: 24, maxWidth: 360, width: "100%", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, color: "var(--db-text)" }}>⚠️ Archiver l'étudiant</div>
+            <p style={{ fontSize: 13, color: "var(--db-text2)", marginBottom: 20 }}>
+              Archiver {student?.name} ? Cette action peut être annulée par un administrateur.
+            </p>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => setConfirm(false)} style={{ padding: "7px 16px", borderRadius: "var(--db-r,8px)", border: "1px solid var(--db-border,#e5e7eb)", background: "transparent", cursor: "pointer", fontSize: 13 }}>
+                Annuler
+              </button>
+              <button onClick={handleArchive} style={{ padding: "7px 16px", borderRadius: "var(--db-r,8px)", border: "none", background: "#A32D2D", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                Archiver
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 /* ══════════════════════════════════════════
    PAYMENTS VIEW
 ══════════════════════════════════════════ */
-function PaiementsView({ payments, setPayments, students, showPayment, API, headers, showT }) {
+function PaiementsView({ payments, setPayments, students, showPayment, API, safeFetch, showT }) {
   const [search, setSearch]           = useState("");
   const [filterStatus, setFilterStatus] = useState("Tous");
   const [filterMonth, setFilterMonth]   = useState("Tous");
@@ -1146,18 +1649,23 @@ function PaiementsView({ payments, setPayments, students, showPayment, API, head
     const mm  = filterMonth==="Tous" || p.month===filterMonth;
     return ms && mst && mm;
   });
-
-  const markPaid = async (id) => {
-    try {
-      const res  = await fetch(`${API}/payments/${id}/pay`, { method:"PATCH", headers, body: JSON.stringify({}) });
-      const data = await res.json();
-      if (data.success) setPayments(ps => ps.map(p => p.id===id ? { ...p, status:"paid" } : p));
-    } catch (err) { console.error(err); }
-  };
-
+const markPaid = async (id) => {
+  const p = payments.find(x => x.id === id);
+  try {
+    const res = await safeFetch(`${API}/payments/${id}/pay`, {
+      method: "PATCH",
+      body: JSON.stringify({ method: p?.method || "Espèces" }),
+    });
+    if (!res) return;
+    const data = await res.json();
+    if (data.success)
+      setPayments(ps => ps.map(x => x.id === id ? { ...x, status: "paid" } : x));
+  } catch (err) { console.error(err); }
+};
   const deleteP = async (id) => {
     try {
-      const res  = await fetch(`${API}/payments/${id}`, { method:"DELETE", headers });
+      const res  = await safeFetch(`${API}/payments/${id}`, { method:"DELETE" });
+      if (!res) return;
       const data = await res.json();
       if (data.success) { setPayments(ps => ps.filter(p => p.id!==id)); showT("Paiement supprimé."); }
     } catch (err) { console.error(err); }
@@ -1229,9 +1737,9 @@ function PaiementsView({ payments, setPayments, students, showPayment, API, head
 }
 
 /* ══════════════════════════════════════════
-   ABSENCES VIEW — connecté au backend
+   ABSENCES VIEW
 ══════════════════════════════════════════ */
-function AbsencesView({ students, API, headers, showT }) {
+function AbsencesView({ students, API, safeFetch, showT }) {
   const [absences, setAbsences] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState("");
@@ -1242,7 +1750,8 @@ function AbsencesView({ students, API, headers, showT }) {
   const loadAbsences = async () => {
     setLoading(true);
     try {
-      const res  = await fetch(`${API}/secretaire/absences`, { headers });
+      const res  = await safeFetch(`${API}/secretaire/absences`);
+      if (!res) return;
       const data = await res.json();
       if (data.success) setAbsences(data.absences);
     } catch (err) { console.error(err); }
@@ -1252,7 +1761,6 @@ function AbsencesView({ students, API, headers, showT }) {
   useEffect(() => { loadAbsences(); }, []);
 
   const critical = students.filter(s => s.absences >= 8);
-
   const filtered = absences.filter(a => {
     const ms   = !search || a.student.toLowerCase().includes(search.toLowerCase());
     const msec = filterSec==="Toutes" || a.section===filterSec;
@@ -1261,7 +1769,8 @@ function AbsencesView({ students, API, headers, showT }) {
 
   const toggle = async (id) => {
     try {
-      const res  = await fetch(`${API}/secretaire/absences/${id}/justify`, { method:"PATCH", headers });
+      const res  = await safeFetch(`${API}/secretaire/absences/${id}/justify`, { method:"PATCH" });
+      if (!res) return;
       const data = await res.json();
       if (data.success) setAbsences(as => as.map(a => a.id===id ? { ...a, justified:data.justified } : a));
     } catch (err) { console.error(err); }
@@ -1269,7 +1778,8 @@ function AbsencesView({ students, API, headers, showT }) {
 
   const deleteA = async (id) => {
     try {
-      const res  = await fetch(`${API}/secretaire/absences/${id}`, { method:"DELETE", headers });
+      const res  = await safeFetch(`${API}/secretaire/absences/${id}`, { method:"DELETE" });
+      if (!res) return;
       const data = await res.json();
       if (data.success) { setAbsences(as => as.filter(a => a.id!==id)); showT("Absence supprimée."); }
     } catch (err) { console.error(err); }
@@ -1278,10 +1788,11 @@ function AbsencesView({ students, API, headers, showT }) {
   const addAbsence = async () => {
     if (!form.student || !form.date) return;
     try {
-      const res  = await fetch(`${API}/secretaire/absences`, {
-        method:"POST", headers,
+      const res  = await safeFetch(`${API}/secretaire/absences`, {
+        method:"POST",
         body: JSON.stringify({ student: form.student, studentId: form.studentId || null, section: form.section, session: form.session, date: form.date, justified: false }),
       });
+      if (!res) return;
       const data = await res.json();
       if (data.success) {
         setAbsences(as => [{ id: data.absence._id, student: data.absence.student, section: data.absence.section, date: data.absence.date, session: data.absence.session, justified: false }, ...as]);
@@ -1375,14 +1886,14 @@ function AbsencesView({ students, API, headers, showT }) {
 }
 
 /* ══════════════════════════════════════════
-   NOTIFICATIONS VIEW — connecté au backend
+   NOTIFICATIONS VIEW
 ══════════════════════════════════════════ */
-function NotificationsView({ notifs, setNotifs, API, headers, showT }) {
+function NotificationsView({ notifs, setNotifs, API, safeFetch, showT }) {
   const [tab, setTab] = useState("Tout");
 
   const markAll = async () => {
     try {
-      await fetch(`${API}/secretaire/notifications/read-all`, { method:"PATCH", headers });
+      await safeFetch(`${API}/secretaire/notifications/read-all`, { method:"PATCH" });
       setNotifs(ns => ns.map(n => ({ ...n, read:true })));
       showT("Toutes les notifications marquées comme lues.");
     } catch (err) { console.error(err); }
@@ -1390,7 +1901,7 @@ function NotificationsView({ notifs, setNotifs, API, headers, showT }) {
 
   const clearAll = async () => {
     try {
-      await Promise.all(notifs.map(n => fetch(`${API}/secretaire/notifications/${n.id}`, { method:"DELETE", headers })));
+      await Promise.all(notifs.map(n => safeFetch(`${API}/secretaire/notifications/${n.id}`, { method:"DELETE" })));
       setNotifs([]);
       showT("Notifications effacées.");
     } catch (err) { console.error(err); }
@@ -1398,7 +1909,7 @@ function NotificationsView({ notifs, setNotifs, API, headers, showT }) {
 
   const toggleRead = async (id) => {
     try {
-      await fetch(`${API}/secretaire/notifications/${id}/read`, { method:"PATCH", headers });
+      await safeFetch(`${API}/secretaire/notifications/${id}/read`, { method:"PATCH" });
       setNotifs(ns => ns.map(n => n.id===id ? { ...n, read:!n.read } : n));
     } catch (err) { console.error(err); }
   };
@@ -1406,7 +1917,7 @@ function NotificationsView({ notifs, setNotifs, API, headers, showT }) {
   const del = async (id, e) => {
     e.stopPropagation();
     try {
-      await fetch(`${API}/secretaire/notifications/${id}`, { method:"DELETE", headers });
+      await safeFetch(`${API}/secretaire/notifications/${id}`, { method:"DELETE" });
       setNotifs(ns => ns.filter(n => n.id!==id));
     } catch (err) { console.error(err); }
   };
@@ -1469,9 +1980,9 @@ function NotificationsView({ notifs, setNotifs, API, headers, showT }) {
 }
 
 /* ══════════════════════════════════════════
-   INBOX VIEW — connecté au backend
+   INBOX VIEW
 ══════════════════════════════════════════ */
-function InboxView({ emails, setEmails, API, headers, showT }) {
+function InboxView({ emails, setEmails, API, safeFetch, showT }) {
   const [selected, setSelected]   = useState(null);
   const [tab, setTab]             = useState("Tout");
   const [search, setSearch]       = useState("");
@@ -1493,7 +2004,7 @@ function InboxView({ emails, setEmails, API, headers, showT }) {
     setSelected(email); setShowReply(false); setReplyText("");
     if (!email.read) {
       try {
-        await fetch(`${API}/secretaire/messages/${email.id}/read`, { method:"PATCH", headers });
+        await safeFetch(`${API}/secretaire/messages/${email.id}/read`, { method:"PATCH" });
         setEmails(es => es.map(e => e.id===email.id ? { ...e, read:true } : e));
       } catch (err) { console.error(err); }
     }
@@ -1502,7 +2013,8 @@ function InboxView({ emails, setEmails, API, headers, showT }) {
   const toggleStar = async (id, ev) => {
     ev.stopPropagation();
     try {
-      const res  = await fetch(`${API}/secretaire/messages/${id}/star`, { method:"PATCH", headers });
+      const res  = await safeFetch(`${API}/secretaire/messages/${id}/star`, { method:"PATCH" });
+      if (!res) return;
       const data = await res.json();
       if (data.success) setEmails(es => es.map(e => e.id===id ? { ...e, starred:data.starred } : e));
     } catch (err) { console.error(err); }
@@ -1510,7 +2022,7 @@ function InboxView({ emails, setEmails, API, headers, showT }) {
 
   const delEmail = async (id) => {
     try {
-      await fetch(`${API}/secretaire/messages/${id}`, { method:"DELETE", headers });
+      await safeFetch(`${API}/secretaire/messages/${id}`, { method:"DELETE" });
       setEmails(es => es.filter(e => e.id!==id));
       setSelected(null);
       showT("Message supprimé.");
@@ -1520,9 +2032,11 @@ function InboxView({ emails, setEmails, API, headers, showT }) {
   const sendReply = async () => {
     if (!replyText.trim()) return;
     try {
-      const res  = await fetch(`${API}/secretaire/messages/${selected.id}/reply`, {
-        method:"POST", headers, body: JSON.stringify({ body: replyText }),
+      const res  = await safeFetch(`${API}/secretaire/messages/${selected.id}/reply`, {
+        method:"POST",
+        body: JSON.stringify({ body: replyText }),
       });
+      if (!res) return;
       const data = await res.json();
       if (data.success) { setReplyText(""); setShowReply(false); showT(`Réponse envoyée.`); }
     } catch (err) { console.error(err); }
@@ -1613,9 +2127,9 @@ function InboxView({ emails, setEmails, API, headers, showT }) {
 }
 
 /* ══════════════════════════════════════════
-   SETTINGS VIEW — connecté au backend
+   SETTINGS VIEW
 ══════════════════════════════════════════ */
-function SettingsView({ API, headers, showT }) {
+function SettingsView({ API, safeFetch, showT }) {
   const [active, setActive]   = useState("Profil");
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState({ fname:"", lname:"", email:"", phone:"", role:"" });
@@ -1624,10 +2138,10 @@ function SettingsView({ API, headers, showT }) {
   const [secErr, setSecErr]         = useState({});
 
   useEffect(() => {
-    fetch(`${API}/secretaire/profile`, { headers })
-      .then(r => r.json())
+    safeFetch(`${API}/secretaire/profile`)
+      .then(r => r?.json())
       .then(data => {
-        if (data.success) {
+        if (data?.success) {
           setProfile({
             fname: data.user.prenom || "", lname: data.user.nom || "",
             email: data.user.email  || "", phone: data.user.telephone || "",
@@ -1641,10 +2155,11 @@ function SettingsView({ API, headers, showT }) {
 
   const saveProfile = async () => {
     try {
-      const res  = await fetch(`${API}/secretaire/profile`, {
-        method:"PUT", headers,
+      const res  = await safeFetch(`${API}/secretaire/profile`, {
+        method:"PUT",
         body: JSON.stringify({ nom: profile.lname, prenom: profile.fname, email: profile.email, telephone: profile.phone }),
       });
+      if (!res) return;
       const data = await res.json();
       if (data.success) showT("Profil enregistré !");
       else showT(`Erreur : ${data.message}`);
@@ -1659,10 +2174,11 @@ function SettingsView({ API, headers, showT }) {
     setSecErr(e);
     if (Object.keys(e).length) return;
     try {
-      const res  = await fetch(`${API}/secretaire/change-password`, {
-        method:"PATCH", headers,
+      const res  = await safeFetch(`${API}/secretaire/change-password`, {
+        method:"PATCH",
         body: JSON.stringify({ currentPwd: security.cur, newPwd: security.new }),
       });
+      if (!res) return;
       const data = await res.json();
       if (data.success) { setSecurity({ cur:"", new:"", confirm:"" }); showT("Mot de passe mis à jour !"); }
       else { setSecErr({ cur:true }); }
@@ -1761,12 +2277,11 @@ function SettingsView({ API, headers, showT }) {
 /* ══════════════════════════════════════════
    SIDEBAR NAV ITEMS
 ══════════════════════════════════════════ */
-// ✅ CORRIGÉ — avec Étudiants et Enseignants
 const NAV_ITEMS = [
   { label:"Dashboard",       icon:"grid",     section:"main" },
   { label:"Inscriptions",    icon:"useradd",  section:"main" },
-  { label:"Étudiants",       icon:"users",    section:"main" },   // ← ajouté
-  { label:"Enseignants",     icon:"book",     section:"main" },   // ← ajouté
+  { label:"Étudiants",       icon:"users",    section:"main" },
+  { label:"Enseignants",     icon:"book",     section:"main" },
   { label:"Sections",        icon:"building", section:"main" },
   { label:"Emploi du temps", icon:"calendar", section:"main" },
   { label:"Paiements",       icon:"credit",   section:"gestion", badge:"pay" },
@@ -1780,155 +2295,225 @@ const NAV_ITEMS = [
    MAIN COMPONENT
 ══════════════════════════════════════════ */
 export default function SecretaireDashboard() {
-  const [activeNav, setActiveNav]         = useState("Dashboard");
-  const [collapsed, setCollapsed]         = useState(false);
-  const [showRegister, setShowRegister]   = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [toast, setToast]                 = useState(null);
-  const [search, setSearch]               = useState("");
+  const [activeNav, setActiveNav]               = useState("Dashboard");
+  const [collapsed, setCollapsed]               = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal]   = useState(false);
+  const [toast, setToast]                         = useState(null);
+  const [search, setSearch]                       = useState("");
 
-  // ── State principal — tout vide au départ, chargé depuis l'API ──
-  const [sections,  setSections]  = useState([]);
-  const [students,  setStudents]  = useState([]);
-  const [pending,   setPending]   = useState([]);
-  const [payments,  setPayments]  = useState([]);
-  const [notifs,    setNotifs]    = useState([]);
-  const [emails,    setEmails]    = useState([]);
+  const currentUserId = localStorage.getItem("userId");
+  const { notifications, unreadCount: notifUnreadCount, markRead, deleteOne } = useNotifications(currentUserId);
 
-  const TOKEN  = localStorage.getItem("token");
-  const API    = "http://localhost:5000/api";
-  const headers = { "Content-Type": "application/json", Authorization: `Bearer ${TOKEN}` };
+  const [sections, setSections] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [pending,  setPending]  = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [notifs,   setNotifs]   = useState([]);
+  const [emails,   setEmails]   = useState([]);
+
+  const API = "http://localhost:5000/api";
+
+  const getHeaders = () => ({
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${localStorage.getItem("token")}`,
+  });
+
+  const safeFetch = async (url, options = {}) => {
+    const opts = {
+      ...options,
+      headers: { ...getHeaders(), ...(options.headers || {}) },
+    };
+    try {
+      const res = await fetch(url, opts);
+      if (res.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("nom");
+        localStorage.removeItem("prenom");
+        localStorage.removeItem("userId");
+        window.location.href = "/login";
+        return null;
+      }
+      return res;
+    } catch (err) {
+      console.error("safeFetch error:", err);
+      return null;
+    }
+  };
 
   const showT = msg => { setToast(msg); setTimeout(() => setToast(null), 2800); };
 
-  /* ════════════════════════════════════════
-     loadAll — charge tout depuis le backend
-  ════════════════════════════════════════ */
+useSocket(currentUserId, (event, data) => {
+  switch (event) {
+    case 'student:added':
+      setPending(prev => [...prev, {
+        id: data._id,
+        name: `${data.prenom || ""} ${data.nom || ""}`.trim(),
+        language: data.language || "—",
+        level: data.level || "A1",
+        phone: data.telephone || "—",
+        email: data.email,
+        date: new Date(data.createdAt).toLocaleDateString("fr-DZ"),
+      }]);
+      showT("Nouvelle inscription reçue !");
+      break;
+
+    case 'section:updated':
+    case 'section:assigned':
+      // ✅ Met à jour l'occupation de la section
+      setSections(prev => prev.map(s =>
+        String(s.id) === String(data.id || data._id)
+          ? { ...s, students: data.students ?? s.students }
+          : s
+      ));
+      break;
+
+    case 'payment:updated':
+      setPayments(prev => prev.map(p =>
+        String(p.id) === String(data.id)
+          ? { ...p, status: data.status }
+          : p
+      ));
+      break;
+
+    case 'absence:marked':
+      loadAll(); // recharge tout
+      break;
+
+    case 'notification:new':
+      setNotifs(prev => [data, ...prev]);
+      showT(data.title || "Nouvelle notification");
+      break;
+
+    case 'message:new':
+      setEmails(prev => [{
+        id: data.id,
+        from: data.from || 'Nouveau message',
+        avatar: '?',
+        subject: data.subject,
+        preview: data.preview,
+        body: '',
+        tag: data.tag || 'sys',
+        read: false,
+        starred: false,
+        time: new Date().toLocaleDateString('fr-DZ'),
+      }, ...prev]);
+      showT(`📩 ${data.subject}`);
+      break;
+
+    default:
+      break;
+  }
+});
   const loadAll = async () => {
     try {
       const [resUsers, resPay, resSections, resNotifs, resMsgs] = await Promise.allSettled([
-        fetch(`${API}/users/role/etudiant`,        { headers }),
-        fetch(`${API}/payments`,                    { headers }),
-        fetch(`${API}/secretaire/sections`,         { headers }),
-        fetch(`${API}/secretaire/notifications`,    { headers }),
-        fetch(`${API}/secretaire/messages`,         { headers }),
+        safeFetch(`${API}/users/role/etudiant`),
+        safeFetch(`${API}/payments`),
+        safeFetch(`${API}/secretaire/sections`),
+        safeFetch(`${API}/secretaire/notifications`),
+        safeFetch(`${API}/secretaire/messages`),
       ]);
 
-      // ── Étudiants (actifs + en attente) ──
-      if (resUsers.status === "fulfilled") {
+      if (resUsers.status === "fulfilled" && resUsers.value) {
         const dataS = await resUsers.value.json();
         if (dataS.success) {
-          setStudents(dataS.users
-            .filter(s => s.actif === true)
-            .map(s => ({
-              id:       s._id,
-              name:     `${s.prenom || ""} ${s.nom || ""}`.trim(),
-              section:  s.section   || "À assigner",
-              language: s.language  || "—",
-              level:    s.level     || "A1",
-              phone:    s.telephone || "—",
-              email:    s.email,
-              status:   "active",
-              absences: s.absences  || 0,
-            }))
-          );
-          setPending(dataS.users
-            .filter(s => s.actif === false)
-            .map(s => ({
-              id:       s._id,
-              name:     `${s.prenom || ""} ${s.nom || ""}`.trim(),
-              language: s.language  || "—",
-              level:    s.level     || "A1",
-              phone:    s.telephone || "—",
-              email:    s.email,
-              date:     new Date(s.createdAt).toLocaleDateString("fr-DZ"),
-            }))
-          );
+          setStudents(dataS.users.filter(s => s.actif === true).map(s => ({
+            id: s._id,
+            name: `${s.prenom || ""} ${s.nom || ""}`.trim(),
+            section: s.section || "À assigner",
+            language: s.language || "—",
+            level: s.level || "A1",
+            phone: s.telephone || "—",
+            email: s.email,
+            status: "active",
+            absences: s.absences || 0,
+          })));
+          setPending(dataS.users.filter(s => s.actif === false).map(s => ({
+            id: s._id,
+            name: `${s.prenom || ""} ${s.nom || ""}`.trim(),
+            language: s.language || "—",
+            level: s.level || "A1",
+            phone: s.telephone || "—",
+            email: s.email,
+            date: new Date(s.createdAt).toLocaleDateString("fr-DZ"),
+          })));
         }
       }
 
-      // ── Paiements ──
-      if (resPay.status === "fulfilled") {
+      if (resPay.status === "fulfilled" && resPay.value) {
         const dataPay = await resPay.value.json();
         if (dataPay.success) {
           setPayments(dataPay.payments.map(p => ({
-            id:      p.id      || p._id,
-            name:    p.student || p.studentName || "—",
-            amount:  p.amount,
-            date:    new Date(p.due || p.createdAt).toLocaleDateString("fr-DZ"),
-            method:  p.method  || "Espèces",
-            status:  p.status,
+            id: p.id || p._id,
+            name: p.student || p.studentName || "—",
+            amount: p.amount,
+            date: new Date(p.due || p.createdAt).toLocaleDateString("fr-DZ"),
+            method: p.method || "Espèces",
+            status: p.status,
             section: p.section || "—",
-            month:   new Date(p.due || p.createdAt).toLocaleDateString("fr-DZ", { month:"long", year:"numeric" }),
+            month: new Date(p.due || p.createdAt).toLocaleDateString("fr-DZ", { month:"long", year:"numeric" }),
           })));
         }
       }
 
-      // ── Sections ──
-      if (resSections.status === "fulfilled") {
+      if (resSections.status === "fulfilled" && resSections.value) {
         const dataSec = await resSections.value.json();
         if (dataSec.success) {
           setSections(dataSec.sections.map(s => ({
-            id:       s._id || s.id,
-            name:     s.name,
+            id: s._id || s.id,
+            name: s.name,
             language: s.language,
-            level:    s.level,
-            teacher:  s.teacher  || "—",
+            level: s.level,
+            teacher: s.teacher || "—",
             students: s.students || s.studentsCount || 0,
             capacity: s.capacity || 12,
-            time:     s.time     || "—",
-            room:     s.room     || "—",
+            time: s.time || "—",
+            room: s.room || "—",
           })));
         }
       }
 
-      // ── Notifications ──
-      if (resNotifs.status === "fulfilled") {
+      if (resNotifs.status === "fulfilled" && resNotifs.value) {
         const dataN = await resNotifs.value.json();
         if (dataN.success) {
           setNotifs(dataN.notifications.map(n => ({
-            id:    n.id || n._id,
-            type:  n.type,
-            icon:  n.icon  || "🔔",
+            id: n.id || n._id,
+            type: n.type,
+            icon: n.icon || "🔔",
             title: n.title,
-            msg:   n.msg   || n.message,
-            time:  n.time,
-            tag:   n.tag   || n.type,
-            read:  n.read,
+            msg: n.msg || n.message,
+            time: n.time,
+            tag: n.tag || n.type,
+            read: n.read,
           })));
         }
       }
 
-      // ── Messages ──
-      if (resMsgs.status === "fulfilled") {
+      if (resMsgs.status === "fulfilled" && resMsgs.value) {
         const dataM = await resMsgs.value.json();
         if (dataM.success) {
           setEmails(dataM.messages.map(m => ({
-            id:      m.id || m._id,
-            from:    m.from,
-            avatar:  m.avatar || initials(m.from || ""),
+            id: m.id || m._id,
+            from: m.from,
+            avatar: m.avatar || initials(m.from || ""),
             subject: m.subject,
             preview: m.preview || (m.body || "").slice(0, 80) + "…",
-            time:    m.time,
-            read:    m.read,
+            time: m.time,
+            read: m.read,
             starred: m.starred || false,
-            tag:     m.tag     || "sys",
-            body:    m.body,
+            tag: m.tag || "sys",
+            body: m.body,
           })));
         }
       }
-
     } catch (err) {
       console.error("Erreur loadAll:", err);
     }
   };
 
-  // Chargement unique au montage
   useEffect(() => { loadAll(); }, []);
 
-  /* ════════════════════════════════════════
-     Badges sidebar
-  ════════════════════════════════════════ */
   const unreadNotif  = notifs.filter(n=>!n.read).length;
   const unreadMail   = emails.filter(e=>!e.read).length;
   const unpaidCount  = payments.filter(p=>p.status!=="paid").length;
@@ -1941,47 +2526,36 @@ export default function SecretaireDashboard() {
     return 0;
   };
 
-  /* ════════════════════════════════════════
-     Rendu des vues
-  ════════════════════════════════════════ */
-const renderView = () => {
-  switch (activeNav) {
-    case "Étudiants":
-      return <EtudiantsView API={API} headers={headers} showT={showT}/>;
-    case "Enseignants":
-      return <TeachersView API={API} headers={headers} showT={showT}/>;
-    case "Inscriptions":
-      return <InscriptionsView students={students} pending={pending} sections={sections} showRegister={()=>setShowRegister(true)} API={API} headers={headers} loadAll={loadAll} showT={showT}/>;
-    case "Sections":
-      return <SectionsView sections={sections} setSections={setSections} API={API} headers={headers} showT={showT}/>;
-    case "Emploi du temps":
-      return <TimetableView API={API} headers={headers} sections={sections} showT={showT}/>;
-    case "Paiements":
-      return <PaiementsView payments={payments} setPayments={setPayments} students={students} showPayment={()=>setShowPaymentModal(true)} API={API} headers={headers} showT={showT}/>;
-    case "Absences":
-      return <AbsencesView students={students} API={API} headers={headers} showT={showT}/>;
-    case "Notifications":
-      return <NotificationsView notifs={notifs} setNotifs={setNotifs} API={API} headers={headers} showT={showT}/>;
-    case "Messagerie":
-      return <InboxView emails={emails} setEmails={setEmails} API={API} headers={headers} showT={showT}/>;
-    case "Paramètres":
-      return <SettingsView API={API} headers={headers} showT={showT}/>;
-    default:
-      return (
-        <DashboardView
-          sections={sections} pending={pending} setPending={setPending}
-          payments={payments} students={students} setActiveNav={setActiveNav}
-          showRegister={() => setShowRegister(true)}
-          showPayment={() => setShowPaymentModal(true)}
-          API={API} headers={headers} loadAll={loadAll} showT={showT}
-        />
-      );
-  }
-};
+  const sharedProps = { API, safeFetch, showT };
+
+  const renderView = () => {
+    switch (activeNav) {
+      case "Étudiants":      return <EtudiantsView {...sharedProps}/>;
+      case "Enseignants":    return <TeachersView {...sharedProps}/>;
+      case "Inscriptions":   return <InscriptionsView students={students} pending={pending} sections={sections} showRegister={()=>setShowRegisterModal(true)} loadAll={loadAll} {...sharedProps}/>;
+      case "Sections":       return <SectionsView sections={sections} setSections={setSections} loadAll={loadAll} {...sharedProps}/>;
+      case "Emploi du temps":return <TimetableView sections={sections} {...sharedProps}/>;
+      case "Paiements":      return <PaiementsView payments={payments} setPayments={setPayments} students={students} showPayment={()=>setShowPaymentModal(true)} {...sharedProps}/>;
+      case "Absences":       return <AbsencesView students={students} {...sharedProps}/>;
+      case "Notifications":  return <NotificationsView notifs={notifs} setNotifs={setNotifs} {...sharedProps}/>;
+      case "Messagerie":     return <InboxView emails={emails} setEmails={setEmails} {...sharedProps}/>;
+      case "Paramètres":     return <SettingsView {...sharedProps}/>;
+      default:
+        return (
+          <DashboardView
+            sections={sections} pending={pending} setPending={setPending}
+            payments={payments} students={students} setActiveNav={setActiveNav}
+            showRegister={() => setShowRegisterModal(true)}
+            showPayment={() => setShowPaymentModal(true)}
+            loadAll={loadAll} getHeaders={getHeaders}
+            {...sharedProps}
+          />
+        );
+    }
+  };
 
   return (
     <div className={`sc-layout${collapsed?" sc-collapsed":""}`}>
-      {/* SIDEBAR */}
       <aside className="sc-sidebar">
         <div className="sc-logo">
           <div className="sc-logo-icon">
@@ -2019,14 +2593,19 @@ const renderView = () => {
           ))}
         </nav>
         <div className="sc-sidebar-bottom">
-          <button className="sc-nav-item sc-nav-danger" onClick={() => { localStorage.removeItem("token"); localStorage.removeItem("nom"); localStorage.removeItem("prenom"); window.location.href = "/login"; }}>
+          <button className="sc-nav-item sc-nav-danger" onClick={() => {
+            localStorage.removeItem("token");
+            localStorage.removeItem("nom");
+            localStorage.removeItem("prenom");
+            localStorage.removeItem("userId");
+            window.location.href = "/login";
+          }}>
             <span className="sc-nav-icon"><Icon name="logout" size={15}/></span>
             {!collapsed && <span className="sc-nav-text">Déconnexion</span>}
           </button>
         </div>
       </aside>
 
-      {/* MAIN */}
       <div className="sc-main">
         <header className="sc-header">
           <div className="sc-header-left">
@@ -2038,7 +2617,7 @@ const renderView = () => {
             <input type="text" placeholder="Rechercher un étudiant, une section…" value={search} onChange={e=>setSearch(e.target.value)}/>
           </div>
           <div className="sc-header-right">
-            <button className="sc-btn-primary sc-btn-sm" onClick={()=>setShowRegister(true)}>
+            <button className="sc-btn-primary sc-btn-sm" onClick={()=>setShowRegisterModal(true)}>
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight:4 }}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Inscrire
             </button>
@@ -2059,15 +2638,14 @@ const renderView = () => {
         <main className="sc-content">{renderView()}</main>
       </div>
 
-      {/* MODAL INSCRIPTION */}
-      {showRegister && (
+      {showRegisterModal && (
         <RegisterModal
           sections={sections}
-          onClose={() => setShowRegister(false)}
+          onClose={() => setShowRegisterModal(false)}
           onSuccess={async (student) => {
             try {
-              const res  = await fetch(`${API}/secretaire/students/register`, {
-                method: "POST", headers,
+              const res = await safeFetch(`${API}/secretaire/students/register`, {
+                method: "POST",
                 body: JSON.stringify({
                   nom:       student.name.split(" ")[0],
                   prenom:    student.name.split(" ")[1] || "",
@@ -2079,15 +2657,15 @@ const renderView = () => {
                   password:  "etudiant123",
                 }),
               });
+              if (!res) return;
               const data = await res.json();
-              if (data.success) { await loadAll(); showT(`Inscription enregistrée en attente.`); }
+              if (data.success) { await loadAll(); showT("Inscription enregistrée en attente."); }
               else showT(`Erreur : ${data.message}`);
             } catch (err) { console.error(err); showT("Erreur de connexion."); }
           }}
         />
       )}
 
-      {/* MODAL PAIEMENT */}
       {showPaymentModal && (
         <PaymentModal
           students={students}
@@ -2095,18 +2673,19 @@ const renderView = () => {
           onSuccess={async (payment) => {
             try {
               const student = students.find(s => s.name === payment.name);
-              const res  = await fetch(`${API}/payments`, {
-                method: "POST", headers,
-                body: JSON.stringify({
-                  studentId:   student?.id,
-                  studentName: payment.name,
-                  language:    student?.language,
-                  level:       student?.level,
-                  amount:      payment.amount,
-                  due:         new Date().toISOString(),
-                  method:      payment.method,
-                }),
+              const res = await safeFetch(`${API}/payments`, {
+                method: "POST",
+body: JSON.stringify({
+  studentId: student?.id,
+  student:   payment.name,     // ← "student" correspond au champ Payment schema
+  language:  student?.language,
+  level:     student?.level,
+  amount:    payment.amount,
+  due:       new Date().toISOString(),
+  method:    payment.method,
+}),
               });
+              if (!res) return;
               const data = await res.json();
               if (data.success) { await loadAll(); showT(`Paiement de ${payment.amount.toLocaleString()} DA enregistré.`); }
               else showT(`Erreur : ${data.message}`);

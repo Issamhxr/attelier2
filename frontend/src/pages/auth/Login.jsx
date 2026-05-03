@@ -107,7 +107,9 @@ const FEATURES = [
   { icon: <IconDollar />,   label: "Payment tracking and invoicing" },
 ];
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL
+  ? import.meta.env.VITE_API_URL.replace(/\/api$/, '')
+  : "http://localhost:5000";
 
 /* ── Forgot Password Modal ── */
 function ForgotPasswordModal({ onClose }) {
@@ -338,43 +340,42 @@ export default function LoginPage() {
     return e;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setAlert("");
-    const errs = validate();
-    setErrors(errs);
-    if (Object.keys(errs).length > 0) return;
-    setLoading(true);
-    try {
-      const res  = await fetch(`${API_URL}/api/auth/login`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setAlert(data.message || "Invalid email or password.");
-      } else {
-        localStorage.setItem("token",  data.accessToken);
-        localStorage.setItem("role",   data.user.role);
-        localStorage.setItem("nom",    data.user.nom    || "");
-        localStorage.setItem("prenom", data.user.prenom || "");
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  setAlert("");
+  const errs = validate();
+  setErrors(errs);
+  if (Object.keys(errs).length > 0) return;
+  setLoading(true);
+  try {
+    const res  = await fetch(`${API_URL}/api/auth/login`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setAlert(data.message || "Invalid email or password.");
+} else {
+  localStorage.setItem("token", data.token);  // ✅ pas data.accessToken
+  localStorage.setItem("role",  data.role);   // ✅ pas data.user.role
+  localStorage.setItem("userId", data.userId); 
 
-        switch (data.user.role) {
-          case "admin":      window.location.href = "/admin";      break;
-          case "professeur": window.location.href = "/professeur"; break;
-          case "secretaire": window.location.href = "/secretaire"; break;
-          case "etudiant":   window.location.href = "/etudiant";   break;
-          default:           window.location.href = "/login";
-        }
-      }
-    } catch {
-      setAlert("Unable to connect to the server.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  switch (data.role) {
+    case "admin":      window.location.href = "/admin";      break;
+    case "professeur": window.location.href = "/professeur"; break;
+    case "secretaire": window.location.href = "/secretaire"; break;
+    case "parent":     window.location.href = "/parent";     break;
+    case "etudiant":   window.location.href = "/etudiant";   break;
+    default:           window.location.href = "/login";
+  }
+}
+  } catch {
+    setAlert("Unable to connect to the server.");
+  } finally {
+    setLoading(false);
+  }
+};
   const clearError = (field) => setErrors((prev) => ({ ...prev, [field]: null }));
 
   return (

@@ -59,7 +59,7 @@ exports.getMessage = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Accès refusé.' });
     }
     if (recipientId === req.user.id && !message.read) { message.read = true; await message.save(); }
-    return res.json({ success: true, message });
+    return res.json({ success: true, message })
   } catch (err) { return res.status(500).json({ success: false, message: err.message }); }
 };
 

@@ -1,5 +1,6 @@
 const User   = require('../models/User');
 const Parent = require('../models/Parent');
+const { emitToAll } = require('../socket');
 
 exports.validateStep = async (req, res) => {
   const { step, email } = req.body;
@@ -24,15 +25,32 @@ exports.createUser = async (req, res) => {
       password: tempPassword, role: role || 'etudiant', telephone: phone || '', actif: true,
     };
 
-    if (role === 'etudiant') { userData.language = language || ''; userData.level = level || ''; userData.schedule = schedule || ''; userData.notes = notes || ''; }
+    if (role === 'etudiant')   { userData.language = language || ''; userData.level = level || ''; userData.schedule = schedule || ''; userData.notes = notes || ''; }
     else if (role === 'professeur') { userData.specialty = specialty || ''; userData.hours = hours || 0; }
     else if (role === 'secretaire') { userData.department = department || ''; }
-    else if (role === 'parent') { userData.relation = relation || ''; userData.linkedStudent = linkedStudent || null; }
+    else if (role === 'parent')     { userData.relation = relation || ''; userData.linkedStudent = linkedStudent || null; }
 
     const user = await User.create(userData);
 
     if (role === 'parent') {
       await Parent.create({ user: user._id, children: linkedStudent ? [{ student: linkedStudent, relation: relation || 'Autre' }] : [] });
+    }
+
+    // ✅ EMIT SOCKET
+    if (role === 'etudiant') {
+      emitToAll('student:added', {
+        _id:       user._id,
+        prenom:    user.prenom,
+        nom:       user.nom,
+        email:     user.email,
+        language:  user.language  || '—',
+        level:     user.level     || 'A1',
+        telephone: user.telephone || '—',
+        section:   user.section   || '',
+        actif:     user.actif,
+        createdAt: user.createdAt,
+        role:      user.role,
+      });
     }
 
     try {
@@ -55,8 +73,8 @@ exports.getStudents = async (req, res) => {
     const { search, language, level, section, actif } = req.query;
     let filter = { role: 'etudiant' };
     if (language) filter.language = language;
-    if (level) filter.level = level;
-    if (section) filter.section = section;
+    if (level)    filter.level    = level;
+    if (section)  filter.section  = section;
     if (actif !== undefined) filter.actif = actif === 'true';
 
     let students = await User.find(filter)
@@ -95,17 +113,17 @@ exports.updateUser = async (req, res) => {
   try {
     const { fname, lname, email, phone, language, level, specialty, hours, department, section, actif } = req.body;
     const updates = {};
-    if (fname !== undefined)  updates.prenom    = fname;
-    if (lname !== undefined)  updates.nom       = lname;
-    if (email)                updates.email     = email.toLowerCase();
-    if (phone !== undefined)  updates.telephone = phone;
-    if (language !== undefined) updates.language = language;
-    if (level !== undefined)    updates.level    = level;
-    if (specialty !== undefined) updates.specialty = specialty;
-    if (hours !== undefined)    updates.hours    = hours;
+    if (fname !== undefined)      updates.prenom     = fname;
+    if (lname !== undefined)      updates.nom        = lname;
+    if (email)                    updates.email      = email.toLowerCase();
+    if (phone !== undefined)      updates.telephone  = phone;
+    if (language !== undefined)   updates.language   = language;
+    if (level !== undefined)      updates.level      = level;
+    if (specialty !== undefined)  updates.specialty  = specialty;
+    if (hours !== undefined)      updates.hours      = hours;
     if (department !== undefined) updates.department = department;
-    if (section !== undefined)  updates.section  = section;
-    if (actif !== undefined)    updates.actif    = actif;
+    if (section !== undefined)    updates.section    = section;
+    if (actif !== undefined)      updates.actif      = actif;
 
     const user = await User.findByIdAndUpdate(req.params.id, updates, { new: true });
     if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable.' });
@@ -157,9 +175,9 @@ exports.updateMe = async (req, res) => {
   try {
     const { fname, lname, email, phone } = req.body;
     const updates = {};
-    if (fname) updates.prenom = fname;
-    if (lname) updates.nom    = lname;
-    if (email) updates.email  = email.toLowerCase();
+    if (fname) updates.prenom    = fname;
+    if (lname) updates.nom       = lname;
+    if (email) updates.email     = email.toLowerCase();
     if (phone) updates.telephone = phone;
     const user = await User.findByIdAndUpdate(req.user.id, updates, { new: true }).select('-password');
     return res.json({ success: true, message: 'Profil mis à jour.', user });

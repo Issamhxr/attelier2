@@ -1,17 +1,25 @@
 const EmploiDuTemps = require('../models/Timetable');
-
+// APRÈS
 exports.getEmplois = async (req, res) => {
   try {
-    const { jour, coursId, professeurId } = req.query;
+    const { jour, day } = req.query;
     let filter = { actif: true };
-    if (jour) filter.jourSemaine = jour;
-    if (coursId) filter.cours = coursId;
-    if (professeurId) filter.professeur = professeurId;
+
+    // Accepter soit un nom français soit un numéro de jour
+    const FR_TO_NUM = {
+      'Dimanche':0,'Lundi':1,'Mardi':2,
+      'Mercredi':3,'Jeudi':4,'Vendredi':5,'Samedi':6
+    };
+    if (jour && FR_TO_NUM[jour] !== undefined) {
+      filter.dayOfWeek = FR_TO_NUM[jour];
+    } else if (day !== undefined) {
+      filter.dayOfWeek = parseInt(day);
+    }
 
     const emplois = await EmploiDuTemps.find(filter)
-      .populate('cours', 'nom langue niveau')
-      .populate({ path: 'professeur', populate: { path: 'user', select: 'nom prenom' } })
-      .sort({ jourSemaine: 1, heureDebut: 1 });
+      .populate('sectionId', 'nom')
+      .sort({ dayOfWeek: 1, startTime: 1 });
+
     res.json({ success: true, count: emplois.length, data: emplois });
   } catch (error) {
     res.status(500).json({ message: error.message });

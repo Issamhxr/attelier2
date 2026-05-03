@@ -1,10 +1,11 @@
-// App.jsx
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Login              from "./pages/auth/Login";
-import AdminDashboard     from "./pages/admin/AdminDashboard";
-import TeacherDashboard   from "./pages/Teacher/TeacherDashboard";
-import StudentDashboard   from "./pages/student/StudentDashboard";
-import SecretaireDashboard from "./pages/secretaire/SecretaireDashboard"; // ✅ Ajoute
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import Home from "./pages/home/Home";
+import Login from "./pages/auth/Login";
+import ParentDashboard from "./pages/parent/Dashboard";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import TeacherDashboard from "./pages/Teacher/TeacherDashboard";
+import StudentDashboard from "./pages/student/StudentDashboard";
+import SecretaireDashboard from "./pages/secretaire/SecretaireDashboard";
 
 function PrivateRoute({ children, allowedRole }) {
   const token = localStorage.getItem("token");
@@ -14,15 +15,29 @@ function PrivateRoute({ children, allowedRole }) {
   return children;
 }
 
+// ✅ Wrapper pour passer onLoginClick à Home
+function HomeWrapper() {
+  const navigate = useNavigate();
+  return <Home onLoginClick={() => navigate("/login")} />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<HomeWrapper />} />
+
         <Route path="/login" element={<Login />} />
 
         <Route path="/admin" element={
           <PrivateRoute allowedRole="admin">
             <AdminDashboard />
+          </PrivateRoute>
+        } />
+
+        <Route path="/parent" element={
+          <PrivateRoute allowedRole="parent">
+            <ParentDashboard />
           </PrivateRoute>
         } />
 
@@ -38,14 +53,13 @@ export default function App() {
           </PrivateRoute>
         } />
 
-        {/* ✅ Ajoute cette route */}
         <Route path="/secretaire" element={
           <PrivateRoute allowedRole="secretaire">
             <SecretaireDashboard />
           </PrivateRoute>
         } />
 
-        <Route path="*" element={<Navigate to="/login" />} />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
   );

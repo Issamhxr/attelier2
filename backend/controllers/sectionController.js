@@ -1,47 +1,105 @@
 const Section = require('../models/Section');
 const User    = require('../models/User');
-
 exports.getSections = async (req, res) => {
   try {
-    const sections = await Section.find().populate('teacherId', 'nom prenom email telephone').lean();
+    const sections = await Section.find()
+      .populate('teacherId', 'nom prenom email telephone')
+      .lean();
     return res.json({
       success: true,
       sections: sections.map(s => ({
-        id: s._id, name: s.name, language: s.language, level: s.level,
-        teacher: s.teacherId ? `${s.teacherId.prenom || ''} ${s.teacherId.nom || ''}`.trim() : s.teacherName || '—',
-        teacherId: s.teacherId?._id || s.teacherId,
-        students: s.studentsCount || 0, capacity: s.capacity,
-        time: s.time || '—', room: s.room || '—',
-        ageGroup: s.ageGroup || 'tous',
+        id:       s._id,
+        name:     s.name,
+        language: s.language,
+        level:    s.level,
+        teacher:  s.teacherId
+          ? `${s.teacherId.prenom || ''} ${s.teacherId.nom || ''}`.trim()
+          : s.teacherName || '—',
+        teacherId:  s.teacherId?._id || s.teacherId,
+students:   s.studentsCount || 0,
+studentIds: (s.students || []).map(id => String(id)),
+        capacity:   s.capacity,
+        time:       s.time || '—',
+        room:       s.room || '—',
+        ageGroup:   s.ageGroup || 'tous',
       })),
     });
-  } catch (err) { return res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+// ✅ NOUVEAU — sections du professeur connecté
+exports.getTeacherSections = async (req, res) => {
+  try {
+    const teacherId = req.user.id;
+
+    const sections = await Section.find({
+      teacherId: teacherId,
+      actif: true,
+    }).lean();
+
+    return res.json({
+      success: true,
+      sections: sections.map(s => ({
+        _id:          s._id,
+        name:         s.name,
+        language:     s.language,
+        level:        s.level,
+        teacherName:  s.teacherName || s.teacher || '—',
+        studentsCount: s.studentsCount ?? s.students?.length ?? 0,
+        time:         s.time || '—',
+        room:         s.room || '—',
+        progress:     s.progress ?? 0,
+        capacity:     s.capacity,
+      }))
+    });
+  } catch (err) {
+    console.error('getTeacherSections error:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
 };
 
 exports.createSection = async (req, res) => {
   try {
     const { name, language, level, capacity, teacherId, teacher, time, room, ageGroup } = req.body;
-    if (!name || !language || !level) return res.status(400).json({ success: false, message: 'Nom, langue et niveau obligatoires.' });
+    if (!name || !language || !level)
+      return res.status(400).json({ success: false, message: 'Nom, langue et niveau obligatoires.' });
 
     const exists = await Section.findOne({ name: name.trim() });
-    if (exists) return res.status(409).json({ success: false, message: 'Une section avec ce nom existe déjà.' });
+    if (exists)
+      return res.status(409).json({ success: false, message: 'Une section avec ce nom existe déjà.' });
 
     let resolvedTeacherId = null, resolvedTeacherName = teacher || '';
     if (teacherId) {
       const prof = await User.findById(teacherId).select('nom prenom actif');
-      if (prof) { resolvedTeacherId = prof._id; resolvedTeacherName = `${prof.prenom || ''} ${prof.nom || ''}`.trim(); }
+      if (prof) {
+        resolvedTeacherId   = prof._id;
+        resolvedTeacherName = `${prof.prenom || ''} ${prof.nom || ''}`.trim();
+      }
     }
 
     const section = await Section.create({
-      name: name.trim(), language, level, capacity: parseInt(capacity) || 12,
-      teacherId: resolvedTeacherId, teacherName: resolvedTeacherName, teacher: resolvedTeacherName,
-      time: time || '', room: room || '', studentsCount: 0,
-      ageGroup: ageGroup || 'tous', actif: true,
+      name: name.trim(), language, level,
+      capacity: parseInt(capacity) || 12,
+      teacherId:   resolvedTeacherId,
+      teacherName: resolvedTeacherName,
+      teacher:     resolvedTeacherName,
+      time: time || '', room: room || '',
+      studentsCount: 0,
+      ageGroup: ageGroup || 'tous',
+      actif: true,
     });
 
     return res.status(201).json({
-      success: true, message: 'Section créée.',
-      section: { _id: section._id, id: section._id, name: section.name, language: section.language, level: section.level, teacher: resolvedTeacherName, teacherId: resolvedTeacherId, capacity: section.capacity, time: section.time, room: section.room, students: 0 },
+      success: true,
+      message: 'Section créée.',
+      section: {
+        _id: section._id, id: section._id,
+        name: section.name, language: section.language, level: section.level,
+        teacher: resolvedTeacherName, teacherId: resolvedTeacherId,
+        capacity: section.capacity, time: section.time, room: section.room,
+        students: 0,
+      },
     });
   } catch (err) { return res.status(500).json({ success: false, message: err.message }); }
 };
@@ -51,23 +109,37 @@ exports.updateSection = async (req, res) => {
     const { name, language, level, capacity, teacherId, teacher, time, room, ageGroup } = req.body;
     const id = req.params.id;
     const updates = {};
-    if (name)       updates.name     = name.trim();
-    if (language)   updates.language = language;
-    if (level)      updates.level    = level;
-    if (capacity)   updates.capacity = parseInt(capacity);
-    if (time !== undefined) updates.time = time;
-    if (room !== undefined) updates.room = room;
-    if (ageGroup)   updates.ageGroup = ageGroup;
 
+    if (name)              updates.name     = name.trim();
+    if (language)          updates.language = language;
+    if (level)             updates.level    = level;
+    if (capacity)          updates.capacity = parseInt(capacity);
+    if (time !== undefined) updates.time    = time;
+    if (room !== undefined) updates.room    = room;
+    if (ageGroup)          updates.ageGroup = ageGroup;
+
+    // ✅ Correction : teacherId peut être une string non vide
     if (teacherId) {
       const prof = await User.findById(teacherId).select('nom prenom');
-      if (prof) { updates.teacherId = prof._id; updates.teacherName = `${prof.prenom || ''} ${prof.nom || ''}`.trim(); updates.teacher = updates.teacherName; }
+      if (prof) {
+        updates.teacherId   = prof._id;
+        updates.teacherName = `${prof.prenom || ''} ${prof.nom || ''}`.trim();
+        updates.teacher     = updates.teacherName;
+      }
+    } else if (teacherId === null || teacherId === '') {
+      // Désaffecter le prof
+      updates.teacherId   = null;
+      updates.teacherName = '';
+      updates.teacher     = '';
     } else if (teacher !== undefined) {
-      updates.teacherName = teacher; updates.teacher = teacher;
+      updates.teacherName = teacher;
+      updates.teacher     = teacher;
     }
 
     const section = await Section.findByIdAndUpdate(id, updates, { new: true });
-    if (!section) return res.status(404).json({ success: false, message: 'Section introuvable.' });
+    if (!section)
+      return res.status(404).json({ success: false, message: 'Section introuvable.' });
+
     return res.json({ success: true, message: 'Section mise à jour.', section });
   } catch (err) { return res.status(500).json({ success: false, message: err.message }); }
 };
@@ -75,7 +147,8 @@ exports.updateSection = async (req, res) => {
 exports.deleteSection = async (req, res) => {
   try {
     const section = await Section.findByIdAndDelete(req.params.id);
-    if (!section) return res.status(404).json({ success: false, message: 'Section introuvable.' });
+    if (!section)
+      return res.status(404).json({ success: false, message: 'Section introuvable.' });
     return res.json({ success: true, message: 'Section supprimée.' });
   } catch (err) { return res.status(500).json({ success: false, message: err.message }); }
 };
@@ -85,7 +158,12 @@ exports.getAvailableRooms = async (req, res) => {
     const ALL_ROOMS = ['A101','A102','A103','A104','B101','B102','B103','B104','C101','C102','C201','C202','Salle Info 1','Salle Info 2','Amphi A','Amphi B'];
     const sections  = await Section.find().select('room').lean();
     const usedRooms = sections.map(s => s.room).filter(Boolean);
-    return res.json({ success: true, rooms: ALL_ROOMS.map(r => ({ name: r, available: !usedRooms.includes(r) })), available: ALL_ROOMS.filter(r => !usedRooms.includes(r)), used: usedRooms });
+    return res.json({
+      success: true,
+      rooms:     ALL_ROOMS.map(r => ({ name: r, available: !usedRooms.includes(r) })),
+      available: ALL_ROOMS.filter(r => !usedRooms.includes(r)),
+      used:      usedRooms,
+    });
   } catch (err) { return res.status(500).json({ success: false, message: err.message }); }
 };
 
@@ -104,7 +182,12 @@ exports.getAvailableSlots = async (req, res) => {
     ];
     const sections  = await Section.find().select('time').lean();
     const usedSlots = sections.map(s => s.time).filter(Boolean);
-    return res.json({ success: true, slots: ALL_SLOTS.map(s => ({ name: s, available: !usedSlots.includes(s) })), available: ALL_SLOTS.filter(s => !usedSlots.includes(s)), used: usedSlots });
+    return res.json({
+      success: true,
+      slots:     ALL_SLOTS.map(s => ({ name: s, available: !usedSlots.includes(s) })),
+      available: ALL_SLOTS.filter(s => !usedSlots.includes(s)),
+      used:      usedSlots,
+    });
   } catch (err) { return res.status(500).json({ success: false, message: err.message }); }
 };
 

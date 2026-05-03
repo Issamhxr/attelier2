@@ -22,6 +22,6 @@ router.put("/profile",     updateProfile);       // PUT  /api/teacher/profile
 router.get("/timetable",   getTimetable);        // GET  /api/teacher/timetable
 router.get("/students",    getMyStudents);       // GET  /api/teacher/students
 router.get("/courses",     getMyCourses);        // GET  /api/teacher/courses
-router.get("/attendance",  getAttendanceSummary);// GET  /api/teacher/attendance
+router.get("/attendance",  getAttendanceSummary);// GET  /api/taeacher/attendance
 
 module.exports = router;
