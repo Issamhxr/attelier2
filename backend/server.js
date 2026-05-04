@@ -19,21 +19,21 @@ require('dotenv').config();
 const app    = express();
 const server = http.createServer(app);
 // ✅ APRÈS
+const ALLOWED_ORIGINS = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+  : ['http://localhost:5173', 'http://192.168.130.115:5173'];
+
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173',
+    origin: ALLOWED_ORIGINS,
     credentials: true,
   }
 });
 /* ══════════════════════════════════════════════════════
    MIDDLEWARE
 ══════════════════════════════════════════════════════ */
-// ✅ APRÈS
 app.use(cors({
-  origin: [
-    "http://localhost:5173",
-    "http://192.168.130.115:5173"
-  ],
+  origin: ALLOWED_ORIGINS,
   credentials: true
 }));
 
