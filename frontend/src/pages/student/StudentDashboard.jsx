@@ -567,7 +567,7 @@ function ExamsView({ exams: initExams }) {
     try {
       const res = await createExam(form);
       setExams(e => [...e, res.data || res]);
-      setForm({ subject:"", date:"", room:"", type:"Final Exam" });
+    setForm({ subject:"", section:"", level:"", type:"Évaluation finale", date:"", time:"", duration:"90", room:"", description:"", maxScore:"20" });
       setShowAdd(false);
     } catch (err) { console.error(err); }
   };

@@ -6,12 +6,25 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import TeacherDashboard from "./pages/Teacher/TeacherDashboard";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import SecretaireDashboard from "./pages/secretaire/SecretaireDashboard";
-
 function PrivateRoute({ children, allowedRole }) {
   const token = localStorage.getItem("token");
   const role  = localStorage.getItem("role");
+
+  console.log("PrivateRoute check:", { token: !!token, role, allowedRole }); // ← debug
+
   if (!token) return <Navigate to="/login" />;
-  if (role !== allowedRole) return <Navigate to="/login" />;
+
+  if (role !== allowedRole) {
+    const redirectMap = {
+      admin:      "/admin",
+      professeur: "/professeur",
+      secretaire: "/secretaire",
+      parent:     "/parent",
+      etudiant:   "/etudiant",
+    };
+    return <Navigate to={redirectMap[role] || "/login"} />;
+  }
+
   return children;
 }
 

@@ -1689,44 +1689,52 @@ function StudentsPage({ students, setStudents, onAdd }) {
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState("active");
   const [archived, setArchived] = useState([]);
-  const [archivedLoading, setArchivedLoading] = useState(false);
+const [archivedLoading, setArchivedLoading] = useState(false);
+
+
   const [profileStudentId, setProfileStudentId] = useState(null); // ✅ ici
 
-  const loadArchived = useCallback(async () => {
-    setArchivedLoading(true);
-    try {
-      const data = await apiFetch("/users/archived?role=etudiant");
-      if (data.success) {
-        setArchived(
-          data.users.map((s) => ({
-            id: s._id,
-            name: `${s.prenom || ""} ${s.nom || ""}`.trim() || s.email,
-            language: s.language || "—",
-            level: s.level || "A1",
-            email: s.email,
-            phone: s.telephone || "—",
-            date: new Date(s.createdAt).toLocaleDateString("en-US"),
-          }))
-        );
-      }
-    } finally {
-      setArchivedLoading(false);
+const loadArchived = useCallback(async () => {
+  setArchivedLoading(true);
+  try {
+    const data = await apiFetch("/users/archived?role=etudiant");  // ← etudiant pas professeur
+    if (data.success) {
+      setArchived(data.users.map((s) => ({
+        id: s._id,
+        name: `${s.prenom || ""} ${s.nom || ""}`.trim() || s.email,
+        language: s.language || "—",
+        level: s.level || "A1",
+        email: s.email,
+        phone: s.telephone || "—",
+        date: new Date(s.createdAt).toLocaleDateString("en-US"),
+      })));
     }
-  }, []);
-
-  useEffect(() => {
-    if (tab === "archived") loadArchived();
-  }, [tab, loadArchived]);
+  } finally {
+    setArchivedLoading(false);
+  }
+}, []);
+useEffect(() => {
+  if (tab === "archived") loadArchived();
+}, [tab, loadArchived]);
+const restoreTeacher = async (id) => {
+  try {
+    const data = await apiFetch(`/users/${id}/restore`, { method: "PATCH" });
+    if (data.success) {
+      setArchived((prev) => prev.filter((t) => t.id !== id));
+      loadTeachers(); // prop à passer depuis AdminDashboard
+    }
+  } catch (err) { console.error(err); }
+};
 
   const restoreStudent = async (id) => {
     try {
       const data = await apiFetch(`/users/${id}/restore`, { method: "PATCH" });
-      if (data.success) setArchived((prev) => prev.filter((s) => s.id !== id));
-    } catch (err) {
-      console.error(err);
-    }
+      if (data.success) {
+        setArchived((prev) => prev.filter((s) => s.id !== id));
+        loadStudents(); // recharge la liste active
+      }
+    } catch (err) { console.error(err); }
   };
-
   const filtered = useMemo(
     () =>
       students.filter((s) => {
@@ -1756,238 +1764,269 @@ function StudentsPage({ students, setStudents, onAdd }) {
     }
   };
 
-  return (
-    <div className="sp-page">
-      {/* ✅ Modal profil */}
-{profileStudentId && (
-  <StudentProfileModal
-    studentId={profileStudentId}
-    onClose={() => setProfileStudentId(null)}
-    onArchived={(id) => {
-      setStudents((ss) => ss.filter((s) => s.id !== id));
-      setProfileStudentId(null);
-    }}
-  />
-)}
+ return (
+  <div className="sp-page">
+    {profileStudentId && (
+      <StudentProfileModal
+        studentId={profileStudentId}
+        onClose={() => setProfileStudentId(null)}
+        onArchived={(id) => {
+          setStudents((ss) => ss.filter((s) => s.id !== id));
+          setProfileStudentId(null);
+        }}
+      />
+    )}
 
-      {confirm && (
-        <ConfirmDialog
-          message={`Archive ${confirm.name}? This action can be undone by an admin.`}
-          onConfirm={() => archiveStudent(confirm.id)}
-          onCancel={() => setConfirm(null)}
-        />
-      )}
+    {confirm && (
+      <ConfirmDialog
+        message={`Archive ${confirm.name}? This action can be undone by an admin.`}
+        onConfirm={() => archiveStudent(confirm.id)}
+        onCancel={() => setConfirm(null)}
+      />
+    )}
 
-      <div className="sp-topbar">
-        <div>
-          <div className="sp-topbar-title">Student Management</div>
-          <span className="sp-topbar-sub">
-            {filtered.length} student{filtered.length !== 1 ? "s" : ""} · Spring semester 2026
-          </span>
-        </div>
-        <button className="db-btn-primary" onClick={onAdd}>
-          <Icon name="useradd" size={13} /> Add a student
+    <div className="sp-topbar">
+      <div>
+        <div className="sp-topbar-title">Student Management</div>
+        <span className="sp-topbar-sub">
+          {filtered.length} student{filtered.length !== 1 ? "s" : ""} · Spring semester 2026
+        </span>
+      </div>
+      <button className="db-btn-primary" onClick={onAdd}>
+        <Icon name="useradd" size={13} /> Add a student
+      </button>
+    </div>
+
+    {/* ── TABS ── */}
+    <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+      {[
+        { key: "active",   label: "Active" },
+        { key: "archived", label: `Archived${archived.length > 0 ? ` (${archived.length})` : ""}` },
+      ].map(t => (
+        <button
+          key={t.key}
+          onClick={() => setTab(t.key)}
+          style={{
+            padding: "6px 16px",
+            borderRadius: "var(--db-r, 8px)",
+            border: "1px solid var(--db-border, #e5e7eb)",
+            fontSize: 12,
+            fontWeight: tab === t.key ? 600 : 400,
+            cursor: "pointer",
+            background: tab === t.key ? "#185FA5" : "transparent",
+            color: tab === t.key ? "#fff" : "var(--db-text2, #666)",
+            transition: "all 0.2s",
+          }}
+        >
+          {t.label}
         </button>
-      </div>
+      ))}
+    </div>
 
-      <div className="sp-filters">
-        <div className="sp-search">
-          <Icon name="search" size={13} />
-          <input
-            placeholder="Search a student…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+    {/* ── VUE ARCHIVÉS ── */}
+    {tab === "archived" && (
+      <div className="db-panel">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div>
+            <span style={{ fontWeight: 600, fontSize: 14, color: "var(--db-text)" }}>Archived students</span>
+            <span style={{ fontSize: 12, color: "var(--db-text2)", marginLeft: 8 }}>{archived.length} archived</span>
+          </div>
         </div>
-        <div className="sp-filter-group">
-          <select value={filterLang} onChange={(e) => setFilterLang(e.target.value)}>
-            {["All","English","French","Spanish","German","Arabic","Mandarin"].map((l) => (
-              <option key={l}>{l}</option>
-            ))}
-          </select>
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-            <option>All</option>
-            <option>Active</option>
-            <option>Pending</option>
-          </select>
-          <select value={filterLevel} onChange={(e) => setFilterLevel(e.target.value)}>
-            <option>All</option>
-            <option value="A">Level A</option>
-            <option value="B">Level B</option>
-            <option value="C">Level C</option>
-          </select>
-        </div>
-        <div className="sp-view-toggle" style={{ marginLeft: "auto" }}>
-          <button
-            className={`sp-view-btn${viewMode === "table" ? " active" : ""}`}
-            onClick={() => setViewMode("table")}
-          >
-            <Icon name="grid" size={13} />
-          </button>
-          <button
-            className={`sp-view-btn${viewMode === "cards" ? " active" : ""}`}
-            onClick={() => setViewMode("cards")}
-          >
-            <Icon name="users" size={13} />
-          </button>
-        </div>
-      </div>
-
-      {viewMode === "cards" ? (
-        <div className="sp-card-grid">
-          {filtered.map((s) => (
-            // ✅ carte cliquable → ouvre le profil
-            <div
-              className="sp-card"
-              key={s.id}
-              style={{ cursor: "pointer" }}
-              onClick={() => setProfileStudentId(s.id)}
-            >
-              <div className="sp-card-top">
-                <div className="sp-avatar">{initials(s.name)}</div>
-                <div className="sp-card-info">
-                  <div className="sp-card-name">{s.name}</div>
-                  <span className="sp-card-lang">{s.language} · {s.section}</span>
-                  <span className="sp-card-date">Enrolled on {s.date}</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
-                  <span className={`db-lvl ${levelCls(s.level)}`}>{s.level}</span>
-                  <span
-                    className={`db-status ${s.status === "active" ? "db-st-active" : "db-st-pending"}`}
-                    style={{ fontSize: 10.5 }}
-                  >
-                    <span className="db-dot" />
-                    {s.status === "active" ? "Active" : "Pending"}
-                  </span>
-                </div>
-              </div>
-              <div className="sp-card-meta">
-                <span style={{ fontSize: 12, color: "var(--db-text2)" }}>
-                  📵 {s.absences} absences
-                </span>
-                <span style={{ fontSize: 12, color: "var(--db-text3)", marginLeft: "auto" }}>
-                  {s.phone}
-                </span>
-              </div>
-              <div className="sp-card-prog">
-                <div className="sp-prog-label">
-                  <span>Attendance</span>
-                  <span>{Math.max(0, 100 - s.absences * 5)}%</span>
-                </div>
-                <div className="sp-prog-track">
-                  <div
-                    className="sp-prog-fill"
-                    style={{ width: `${Math.max(0, 100 - s.absences * 5)}%` }}
-                  />
-                </div>
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-                {/* ✅ stopPropagation pour ne pas ouvrir le profil */}
-                <button
-                  style={{
-                    background: "none", border: "none", cursor: "pointer",
-                    color: "var(--db-text3)", padding: "4px", borderRadius: "6px",
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setConfirm({ id: s.id, name: s.name });
-                  }}
-                >
-                  <Icon name="trash" size={13} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="db-panel">
+        {archivedLoading ? (
+          <div style={{ textAlign: "center", padding: "2rem", color: "var(--db-text3)", fontSize: 13 }}>Loading…</div>
+        ) : archived.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "2rem", color: "var(--db-text3)", fontSize: 13 }}>No archived students.</div>
+        ) : (
           <table className="db-table">
             <thead>
               <tr>
                 <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
                 <th>Language</th>
                 <th>Level</th>
-                <th>Section</th>
-                <th>Absences</th>
-                <th>Status</th>
                 <th>Enrolled</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={8} style={{ textAlign: "center", padding: "2rem", color: "var(--db-text3)", fontSize: 13 }}>
-                    No students found.
-                  </td>
-                </tr>
-              )}
-              {filtered.map((s) => (
-                // ✅ ligne cliquable → ouvre le profil
-                <tr
-                  key={s.id}
-                  style={{ cursor: "pointer" }}
-                  onClick={() => setProfileStudentId(s.id)}
-                >
+              {archived.map(s => (
+                <tr key={s.id}>
                   <td>
                     <div className="db-s-cell">
                       <div className="db-mini-av">{initials(s.name)}</div>
                       <strong>{s.name}</strong>
                     </div>
                   </td>
-                  <td>{s.language}</td>
+                  <td style={{ fontSize: 12, color: "var(--db-text2)" }}>{s.email}</td>
+                  <td style={{ fontSize: 12, color: "var(--db-text2)" }}>{s.phone}</td>
+                  <td style={{ fontSize: 12 }}>{s.language}</td>
+                  <td><span className={`db-lvl ${levelCls(s.level)}`}>{s.level}</span></td>
+                  <td style={{ fontSize: 12, color: "var(--db-text2)" }}>{s.date}</td>
                   <td>
-                    <span className={`db-lvl ${levelCls(s.level)}`}>{s.level}</span>
-                  </td>
-                  <td style={{ fontSize: 12, color: "var(--db-text2)" }}>{s.section}</td>
-                  <td>
-                    <span style={{
-                      fontSize: 13, fontWeight: 600,
-                      color: s.absences >= 8 ? "#C0352A" : s.absences >= 4 ? "#7A4A0A" : "#2D7A3A",
-                    }}>
-                      {s.absences}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`db-status ${s.status === "active" ? "db-st-active" : "db-st-pending"}`}>
-                      <span className="db-dot" />
-                      {s.status === "active" ? "Active" : "Pending"}
-                    </span>
-                  </td>
-                  <td className="db-date-cell">{s.date}</td>
-                  <td>
-                    {/* ✅ stopPropagation pour ne pas ouvrir le profil */}
                     <button
+                      onClick={() => restoreStudent(s.id)}
                       style={{
-                        background: "none", border: "none", cursor: "pointer",
-                        color: "var(--db-text3)", padding: "5px",
-                        borderRadius: "7px", transition: "all 0.2s",
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setConfirm({ id: s.id, name: s.name });
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.color = "#C0352A";
-                        e.currentTarget.style.background = "var(--db-red-bg)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.color = "var(--db-text3)";
-                        e.currentTarget.style.background = "none";
+                        padding: "4px 12px", borderRadius: "var(--db-r, 8px)",
+                        border: "1px solid #2D7A3A", background: "#EAF3DE",
+                        color: "#2D7A3A", fontSize: 11, fontWeight: 600, cursor: "pointer",
                       }}
                     >
-                      <Icon name="trash" size={13} />
+                      Restore
                     </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        )}
+      </div>
+    )}
+
+    {/* ── VUE ACTIFS ── */}
+    {tab === "active" && (
+      <>
+        <div className="sp-filters">
+          <div className="sp-search">
+            <Icon name="search" size={13} />
+            <input
+              placeholder="Search a student…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="sp-filter-group">
+            <select value={filterLang} onChange={(e) => setFilterLang(e.target.value)}>
+              {["All","English","French","Spanish","German","Arabic","Mandarin"].map((l) => (
+                <option key={l}>{l}</option>
+              ))}
+            </select>
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+              <option>All</option>
+              <option>Active</option>
+              <option>Pending</option>
+            </select>
+            <select value={filterLevel} onChange={(e) => setFilterLevel(e.target.value)}>
+              <option>All</option>
+              <option value="A">Level A</option>
+              <option value="B">Level B</option>
+              <option value="C">Level C</option>
+            </select>
+          </div>
+          <div className="sp-view-toggle" style={{ marginLeft: "auto" }}>
+            <button className={`sp-view-btn${viewMode === "table" ? " active" : ""}`} onClick={() => setViewMode("table")}>
+              <Icon name="grid" size={13} />
+            </button>
+            <button className={`sp-view-btn${viewMode === "cards" ? " active" : ""}`} onClick={() => setViewMode("cards")}>
+              <Icon name="users" size={13} />
+            </button>
+          </div>
         </div>
-      )}
-    </div>
-  );
+
+        {viewMode === "cards" ? (
+          <div className="sp-card-grid">
+            {filtered.map((s) => (
+              <div className="sp-card" key={s.id} style={{ cursor: "pointer" }} onClick={() => setProfileStudentId(s.id)}>
+                <div className="sp-card-top">
+                  <div className="sp-avatar">{initials(s.name)}</div>
+                  <div className="sp-card-info">
+                    <div className="sp-card-name">{s.name}</div>
+                    <span className="sp-card-lang">{s.language} · {s.section}</span>
+                    <span className="sp-card-date">Enrolled on {s.date}</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
+                    <span className={`db-lvl ${levelCls(s.level)}`}>{s.level}</span>
+                    <span className={`db-status ${s.status === "active" ? "db-st-active" : "db-st-pending"}`} style={{ fontSize: 10.5 }}>
+                      <span className="db-dot" />{s.status === "active" ? "Active" : "Pending"}
+                    </span>
+                  </div>
+                </div>
+                <div className="sp-card-meta">
+                  <span style={{ fontSize: 12, color: "var(--db-text2)" }}>📵 {s.absences} absences</span>
+                  <span style={{ fontSize: 12, color: "var(--db-text3)", marginLeft: "auto" }}>{s.phone}</span>
+                </div>
+                <div className="sp-card-prog">
+                  <div className="sp-prog-label">
+                    <span>Attendance</span><span>{Math.max(0, 100 - s.absences * 5)}%</span>
+                  </div>
+                  <div className="sp-prog-track">
+                    <div className="sp-prog-fill" style={{ width: `${Math.max(0, 100 - s.absences * 5)}%` }} />
+                  </div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+                  <button
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--db-text3)", padding: "4px", borderRadius: "6px" }}
+                    onClick={(e) => { e.stopPropagation(); setConfirm({ id: s.id, name: s.name }); }}
+                  >
+                    <Icon name="trash" size={13} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="db-panel">
+            <table className="db-table">
+              <thead>
+                <tr>
+                  <th>Name</th><th>Language</th><th>Level</th><th>Section</th>
+                  <th>Absences</th><th>Status</th><th>Enrolled</th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.length === 0 && (
+                  <tr><td colSpan={8} style={{ textAlign: "center", padding: "2rem", color: "var(--db-text3)", fontSize: 13 }}>No students found.</td></tr>
+                )}
+                {filtered.map((s) => (
+                  <tr key={s.id} style={{ cursor: "pointer" }} onClick={() => setProfileStudentId(s.id)}>
+                    <td><div className="db-s-cell"><div className="db-mini-av">{initials(s.name)}</div><strong>{s.name}</strong></div></td>
+                    <td>{s.language}</td>
+                    <td><span className={`db-lvl ${levelCls(s.level)}`}>{s.level}</span></td>
+                    <td style={{ fontSize: 12, color: "var(--db-text2)" }}>{s.section}</td>
+                    <td>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: s.absences >= 8 ? "#C0352A" : s.absences >= 4 ? "#7A4A0A" : "#2D7A3A" }}>
+                        {s.absences}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`db-status ${s.status === "active" ? "db-st-active" : "db-st-pending"}`}>
+                        <span className="db-dot" />{s.status === "active" ? "Active" : "Pending"}
+                      </span>
+                    </td>
+                    <td className="db-date-cell">{s.date}</td>
+                    <td>
+                      <button
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--db-text3)", padding: "5px", borderRadius: "7px", transition: "all 0.2s" }}
+                        onClick={(e) => { e.stopPropagation(); setConfirm({ id: s.id, name: s.name }); }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = "#C0352A"; e.currentTarget.style.background = "var(--db-red-bg)"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = "var(--db-text3)"; e.currentTarget.style.background = "none"; }}
+                      >
+                        <Icon name="trash" size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </>
+    )}
+  </div>
+);
 }
+const restoreStudent = async (id) => {
+  try {
+    const data = await apiFetch(`/users/${id}/restore`, { method: "PATCH" });
+    if (data.success) {
+      setArchived((prev) => prev.filter((s) => s.id !== id));
+      // Recharger les actifs
+      loadStudents(); // si accessible, sinon recharger via apiFetch
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
 /* ══════════════════════════════════════════════════════════════
    TEACHER PROFILE MODAL
 ══════════════════════════════════════════════════════════════ */
@@ -2251,9 +2290,45 @@ function TeacherProfileModal({ teacherId, onClose, onArchived }) {
 /* ══════════════════════════════════════════════════════════════
    TEACHERS PAGE — avec confirmation suppression
 ══════════════════════════════════════════════════════════════ */
-function TeachersPage({ teachers, setTeachers, onAdd }) {
+function TeachersPage({ teachers, setTeachers, onAdd, loadTeachers }) {
   const [confirm, setConfirm] = useState(null);
-  const [profileTeacherId, setProfileTeacherId] = useState(null); // ← AJOUTER
+  const [profileTeacherId, setProfileTeacherId] = useState(null);
+  const [tab, setTab] = useState("active");
+  const [archived, setArchived] = useState([]);
+  const [archivedLoading, setArchivedLoading] = useState(false);
+
+  const loadArchived = useCallback(async () => {
+    setArchivedLoading(true);
+    try {
+      const data = await apiFetch("/users/archived?role=professeur");
+      if (data.success) {
+        setArchived(data.users.map((t) => ({
+          id: t._id,
+          name: `${t.prenom || ""} ${t.nom || ""}`.trim() || t.email,
+          specialty: t.specialty || "—",
+          email: t.email,
+          phone: t.telephone || "—",
+          joined: new Date(t.createdAt).toLocaleDateString("en-US"),
+        })));
+      }
+    } finally {
+      setArchivedLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tab === "archived") loadArchived();
+  }, [tab, loadArchived]);
+
+  const restoreTeacher = async (id) => {
+    try {
+      const data = await apiFetch(`/users/${id}/restore`, { method: "PATCH" });
+      if (data.success) {
+        setArchived((prev) => prev.filter((t) => t.id !== id));
+        if (loadTeachers) loadTeachers();
+      }
+    } catch (err) { console.error(err); }
+  };
 
   const archiveTeacher = async (id) => {
     try {
@@ -2266,8 +2341,6 @@ function TeachersPage({ teachers, setTeachers, onAdd }) {
 
   return (
     <div className="tp-page">
-
-      {/* ← AJOUTER : modal profil enseignant */}
       {profileTeacherId && (
         <TeacherProfileModal
           teacherId={profileTeacherId}
@@ -2278,7 +2351,6 @@ function TeachersPage({ teachers, setTeachers, onAdd }) {
           }}
         />
       )}
-
       {confirm && (
         <ConfirmDialog
           message={`Archive teacher ${confirm.name}? Their classes will need to be reassigned.`}
@@ -2301,67 +2373,100 @@ function TeachersPage({ teachers, setTeachers, onAdd }) {
         </button>
       </div>
 
-      <div className="db-panel">
-        <table className="db-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Specialty</th>
-              <th>Joined</th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {teachers.length === 0 && (
-              <tr>
-                <td colSpan={7} style={{ textAlign:"center", padding:"2rem", color:"var(--db-text3)", fontSize:13 }}>
-                  No teachers registered.
-                </td>
-              </tr>
-            )}
-{teachers.map((t) => (
-  <tr
-    key={t.id}
-    style={{ cursor: "pointer" }}
-    onClick={() => setProfileTeacherId(t.id)}
-  >
-    <td>
-      <div className="db-s-cell">
-        <div className="db-mini-av">{initials(t.name)}</div>
-        <strong>{t.name}</strong>
+      {/* ── TABS ── */}
+      <div style={{ display:"flex", gap:8, marginTop:14, marginBottom:12 }}>
+        {[
+          { key:"active",   label:"Active" },
+          { key:"archived", label:`Archived${archived.length > 0 ? ` (${archived.length})` : ""}` },
+        ].map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)} style={{
+            padding:"6px 16px", borderRadius:"var(--db-r,8px)",
+            border:"1px solid var(--db-border,#e5e7eb)", fontSize:12,
+            fontWeight: tab === t.key ? 600 : 400, cursor:"pointer",
+            background: tab === t.key ? "#3B6D11" : "transparent",
+            color: tab === t.key ? "#fff" : "var(--db-text2,#666)",
+            transition:"all 0.2s",
+          }}>
+            {t.label}
+          </button>
+        ))}
       </div>
-    </td>
-    <td style={{ fontSize:12, color:"var(--db-text2)" }}>{t.email || "—"}</td>
-    <td style={{ fontSize:12, color:"var(--db-text2)" }}>{t.phone || "—"}</td>
-    <td style={{ fontSize:12 }}>{t.specialty || "—"}</td>
-    <td style={{ fontSize:12, color:"var(--db-text2)" }}>{t.joined || "—"}</td>
-    <td>
-      <span className={`db-status ${t.rating !== "—" ? "db-st-active" : "db-st-pending"}`}>
-        <span className="db-dot" />
-        Active
-      </span>
-    </td>
-    <td>
-      <button
-        style={{ background:"none", border:"none", cursor:"pointer", color:"var(--db-text3)", padding:"5px", borderRadius:"7px", transition:"all 0.2s" }}
-        onClick={(e) => {
-          e.stopPropagation();
-          setConfirm({ id: t.id, name: t.name });
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.color="#C0352A"; e.currentTarget.style.background="var(--db-red-bg)"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color="var(--db-text3)"; e.currentTarget.style.background="none"; }}
-      >
-        <Icon name="trash" size={13}/>
-      </button>
-    </td>
-  </tr>
-))}
-          </tbody>
-        </table>
-      </div>
+
+      {/* ── VUE ARCHIVÉS ── */}
+      {tab === "archived" && (
+        <div className="db-panel">
+          {archivedLoading ? (
+            <div style={{ textAlign:"center", padding:"2rem", color:"var(--db-text3)", fontSize:13 }}>Loading…</div>
+          ) : archived.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"2rem", color:"var(--db-text3)", fontSize:13 }}>No archived teachers.</div>
+          ) : (
+            <table className="db-table">
+              <thead>
+                <tr><th>Name</th><th>Email</th><th>Phone</th><th>Specialty</th><th>Joined</th><th></th></tr>
+              </thead>
+              <tbody>
+                {archived.map(t => (
+                  <tr key={t.id}>
+                    <td><div className="db-s-cell"><div className="db-mini-av">{initials(t.name)}</div><strong>{t.name}</strong></div></td>
+                    <td style={{ fontSize:12, color:"var(--db-text2)" }}>{t.email || "—"}</td>
+                    <td style={{ fontSize:12, color:"var(--db-text2)" }}>{t.phone || "—"}</td>
+                    <td style={{ fontSize:12 }}>{t.specialty || "—"}</td>
+                    <td style={{ fontSize:12, color:"var(--db-text2)" }}>{t.joined}</td>
+                    <td>
+                      <button
+                        onClick={() => restoreTeacher(t.id)}
+                        style={{ padding:"4px 12px", borderRadius:"var(--db-r,8px)", border:"1px solid #2D7A3A", background:"#EAF3DE", color:"#2D7A3A", fontSize:11, fontWeight:600, cursor:"pointer" }}
+                      >
+                        Restore
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* ── VUE ACTIFS ── */}
+      {tab === "active" && (
+        <div className="db-panel">
+          <table className="db-table">
+            <thead>
+              <tr><th>Name</th><th>Email</th><th>Phone</th><th>Specialty</th><th>Joined</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody>
+              {teachers.length === 0 && (
+                <tr><td colSpan={7} style={{ textAlign:"center", padding:"2rem", color:"var(--db-text3)", fontSize:13 }}>No teachers registered.</td></tr>
+              )}
+              {teachers.map((t) => (
+                <tr key={t.id} style={{ cursor:"pointer" }} onClick={() => setProfileTeacherId(t.id)}>
+                  <td><div className="db-s-cell"><div className="db-mini-av">{initials(t.name)}</div><strong>{t.name}</strong></div></td>
+                  <td style={{ fontSize:12, color:"var(--db-text2)" }}>{t.email || "—"}</td>
+                  <td style={{ fontSize:12, color:"var(--db-text2)" }}>{t.phone || "—"}</td>
+                  <td style={{ fontSize:12 }}>{t.specialty || "—"}</td>
+                  <td style={{ fontSize:12, color:"var(--db-text2)" }}>{t.joined || "—"}</td>
+                  <td>
+                    <span className="db-status db-st-active">
+                      <span className="db-dot" />Active
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      style={{ background:"none", border:"none", cursor:"pointer", color:"var(--db-text3)", padding:"5px", borderRadius:"7px", transition:"all 0.2s" }}
+                      onClick={(e) => { e.stopPropagation(); setConfirm({ id: t.id, name: t.name }); }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color="#C0352A"; e.currentTarget.style.background="var(--db-red-bg)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color="var(--db-text3)"; e.currentTarget.style.background="none"; }}
+                    >
+                      <Icon name="trash" size={13}/>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -2401,17 +2506,18 @@ function TeachersPage({ teachers, setTeachers, onAdd }) {
   };
   
 
-  const [form, setForm] = useState({
-    name: "",
-    language: "English",
-    level: "A1",
-    teacher: "",
-    teacherId: "",
-    time: "",
-    room: "",
-    capacity: 12,
-  });
-
+const [form, setForm] = useState({
+  subject: "",      // ← était "title"
+  section: "",
+  level: "",
+  type: "Évaluation finale",  // ← valeur par défaut du modèle
+  date: "",
+  time: "",
+  duration: "90",
+  room: "",
+  description: "",
+  maxScore: "20",
+});
   useEffect(() => {
     apiFetch("/users/role/professeur").then((data) => {
       if (data.success)
@@ -6421,6 +6527,21 @@ useSocket(currentUserId, useCallback((event, data) => {
           : s
       ));
       break;
+      case 'section:created':
+  setSections(prev => {
+    if (prev.find(s => String(s.id) === String(data.id))) return prev;
+    return [...prev, {
+      id: data.id, name: data.name, language: data.language,
+      level: data.level, teacher: data.teacher || '—',
+      students: 0, capacity: data.capacity || 12,
+      time: data.time || '—', room: data.room || '—',
+    }];
+  });
+showToast(`Nouvelle section: ${data.name}`);
+  break;
+case 'section:deleted':
+  setSections(prev => prev.filter(s => String(s.id) !== String(data.id)));
+  break;
 
     case 'notification:new':
     case 'notification':
@@ -6572,20 +6693,23 @@ useSocket(currentUserId, useCallback((event, data) => {
 
   const renderContent = () => {
     switch (activeNav) {
-      case "Students":
-        return (
-          <StudentsPage
-            students={students}
-            setStudents={setStudents}
-            onAdd={() => openAddUser("etudiant")}
-          />
-        );
+// Dans renderContent() :
+case "Students":
+  return (
+    <StudentsPage
+      students={students}
+      setStudents={setStudents}
+      onAdd={() => openAddUser("etudiant")}
+      loadStudents={loadStudents}   // ← ajouter
+    />
+  );
       case "Teachers":
         return (
           <TeachersPage
             teachers={teachers}
             setTeachers={setTeachers}
             onAdd={() => openAddUser("professeur")}
+              loadTeachers={loadTeachers} 
           />
         );
       case "Classes":

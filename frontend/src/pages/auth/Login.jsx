@@ -357,6 +357,7 @@ export default function LoginPage() {
     if (!res.ok) {
       setAlert(data.message || "Invalid email or password.");
 } else {
+  console.log("DATA REÇUE:", data); // ← AJOUTE ÇA
   localStorage.setItem("token", data.token);  // ✅ pas data.accessToken
   localStorage.setItem("role",  data.role);   // ✅ pas data.user.role
   localStorage.setItem("userId", data.userId); 

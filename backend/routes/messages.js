@@ -1,23 +1,37 @@
-// routes/messages.js
 const express = require('express');
 const router  = express.Router();
-const ctrl    = require('../controllers/messageController');
-const { protect } = require('../middleware/auth');
+const Exam    = require('../models/Exam');
+const auth    = require('../middleware/auth');
 
-router.use(protect);
+// GET tous les exams
+router.get('/', auth, async (req, res) => {
+  try {
+    const exams = await Exam.find().sort({ date: 1 });
+    res.json({ success: true, exams });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
-// ⚠️ Routes statiques avant /:id
-router.get('/contacts',       ctrl.getContacts);
-router.get('/sent',           ctrl.getSentMessages);
-router.get('/unread-count',   ctrl.getUnreadCount);
+// POST créer un exam
+router.post('/', auth, async (req, res) => {
+  try {
+    const { subject, date, room, type, section } = req.body;
+    const exam = await Exam.create({ subject, date, room, type, section });
+    res.json({ success: true, exam });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
-router.get('/',               ctrl.getMessages);
-router.post('/',              ctrl.sendMessage);
-
-router.get('/:id',            ctrl.getMessage);
-router.post('/:id/reply',     ctrl.replyMessage);
-router.patch('/:id/star',     ctrl.toggleStar);
-router.patch('/:id/read',     ctrl.markAsRead);
-router.delete('/:id',         ctrl.deleteMessage);
+// DELETE supprimer un exam
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    await Exam.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 module.exports = router;

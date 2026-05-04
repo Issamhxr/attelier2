@@ -1198,7 +1198,7 @@ const nextSessions = (emplois || []).slice(0, 3).map(e => ({
 const navItems = [
   {
     label: "Home",
-    section: "main",
+    section: "Home",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -1217,7 +1217,7 @@ const navItems = [
   },
   {
     label: "Timetable",
-    section: "main",
+    section: "Home",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -1238,7 +1238,7 @@ const navItems = [
   },
   {
     label: "Marks",
-    section: "main",
+    section: "Home",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -1257,7 +1257,7 @@ const navItems = [
   },
   {
     label: "Absences",
-    section: "main",
+    section: "Home",
     icon: (
       <svg
         viewBox="0 0 24 24"

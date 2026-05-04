@@ -30,9 +30,13 @@ const io = new Server(server, {
 ══════════════════════════════════════════════════════ */
 // ✅ APRÈS
 app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true,
+  origin: [
+    "http://localhost:5173",
+    "http://192.168.130.115:5173"
+  ],
+  credentials: true
 }));
+
 app.use(express.json());
 app.use((req, _res, next) => { req.io = io; next(); });
 
@@ -244,6 +248,29 @@ app.get('/api/notes', auth, async (req, res) => {
     res.json({ success: true, notes });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
+app.get('/api/notes/teacher/section/:sectionId', auth, async (req, res) => {
+  try {
+    const section = await Section.findById(req.params.sectionId);
+    if (!section) return res.status(404).json({ success: false });
+
+    const Etudiant = require('./models/Etudiant');
+    const etudiants = await Etudiant.find({ user: { $in: section.studentIds } });
+
+    const notes = await Note.find({ etudiant: { $in: etudiants.map(e => e._id) } })
+      .populate({ path: 'etudiant', populate: { path: 'user', select: '_id' } });
+
+    // Retourne un objet { userId: { Written: 15, Oral: 12, ... } }
+    const grades = {};
+    notes.forEach(n => {
+      const uid = String(n.etudiant?.user?._id);
+      if (!uid) return;
+      if (!grades[uid]) grades[uid] = {};
+      grades[uid][n.typeEvaluation] = n.note;
+    });
+
+    res.json({ success: true, grades });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
 
 app.post('/api/notes', auth, async (req, res) => {
   try {
@@ -389,7 +416,7 @@ app.post('/api/absences', auth, async (req, res) => {
     const { studentId, name, language, level, date, session, reason } = req.body;
     const absence = await Absence.create({ studentId, name, language, level, date, session, reason });
     const updated = await User.findByIdAndUpdate(studentId, { $inc: { absences: 1 } }, { new: true });
-    req.io.emit('absence:marked', { studentId, totalAbsences: updated?.absences || 0 });
+req.io.emit('absence:marked', { studentId, absent: true, totalAbsences: updated?.absences || 0 });
     req.io.to(`user:${studentId}`).emit('absence:marked', { studentId, date, language, session });
     const parentUser = await User.findOne({ linkedStudent: studentId });
     if (parentUser) {
@@ -487,6 +514,27 @@ app.get('/api/users/me', auth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
+});
+app.put('/api/users/me', auth, async (req, res) => {
+  try {
+    const { fname, lname, email, phone } = req.body;
+    await User.findByIdAndUpdate(req.user.id, {
+      prenom: fname,
+      nom: lname,
+      email: email,
+      telephone: phone,
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+app.put('/api/users/:id', auth, async (req, res) => {
+  try {
+    const { level } = req.body;
+    await User.findByIdAndUpdate(req.params.id, { level });
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 app.patch('/api/users/change-password', auth, async (req, res) => {
   try {
@@ -658,6 +706,7 @@ app.post('/api/sections', auth, async (req, res) => {
 app.delete('/api/sections/:id', auth, async (req, res) => {
   try {
     await Section.findByIdAndDelete(req.params.id);
+    req.io.emit('section:deleted', { id: req.params.id });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -750,16 +799,17 @@ app.get('/api/absences', auth, async (req, res) => {
       : {};
 
     const absences = await Absence.find(query).sort({ date: -1 });
-    const formatted = absences.map(a => ({
-      id:        String(a._id),
-      name:      a.name,
-      language:  a.language,
-      level:     a.level,
-      date:      a.date,
-      session:   a.session,
-      reason:    a.reason,
-      justified: a.justified,
-    }));
+const formatted = absences.map(a => ({
+  id:        String(a._id),
+  studentId: String(a.studentId || ''),
+  name:      a.name,
+  language:  a.language,
+  level:     a.level,
+  date:      a.date,
+  session:   a.session,
+  reason:    a.reason,
+  justified: a.justified,
+}));
     res.json({ success: true, absences: formatted });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -817,7 +867,41 @@ app.patch('/api/absences/:id/justify', auth, async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+app.delete('/api/absences/today/:studentId', auth, async (req, res) => {
+  try {
+    let studentObjId;
+    try {
+      studentObjId = new mongoose.Types.ObjectId(req.params.studentId);
+    } catch {
+      return res.status(400).json({ success: false, message: 'Invalid studentId' });
+    }
 
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const end   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    // ✅ deleteMany au cas où plusieurs absences le même jour
+    const result = await Absence.deleteMany({
+      studentId: studentObjId,
+      date: { $gte: start, $lte: end },
+    });
+
+    if (result.deletedCount > 0) {
+      await User.findByIdAndUpdate(studentObjId, {
+        $inc: { absences: -result.deletedCount }
+      });
+      req.io.emit('absence:marked', {
+        studentId: req.params.studentId,
+        absent: false,
+        totalAbsences: 0,
+      });
+    }
+
+    res.json({ success: true, deleted: result.deletedCount });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 app.delete('/api/absences/:id', auth, async (req, res) => {
   try {
     const absence = await Absence.findByIdAndDelete(req.params.id);
@@ -908,7 +992,14 @@ app.patch('/api/payments/:id', auth, async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
-
+app.delete('/api/payments/:id', auth, async (req, res) => {
+  try {
+    await Payment.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 /* ══════════════════════════════════════════════════════
    ROUTES — NOTIFICATIONS
 ══════════════════════════════════════════════════════ */
@@ -1201,13 +1292,20 @@ app.post('/api/secretaire/sections', auth, async (req, res) => {
       time, room, capacity: capacity || 12,
       studentIds: [],
     });
+    req.io.emit('section:created', {
+      id: String(section._id), name: section.name, language: section.language,
+      level: section.level, teacher: section.teacher, teacherId: String(section.teacherId || ''),
+      students: 0, capacity: section.capacity, time: section.time, room: section.room,
+    });
     res.json({ success: true, section });
+
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
 app.delete('/api/secretaire/sections/:id', auth, async (req, res) => {
   try {
-    await Section.findByIdAndDelete(req.params.id);
+   await Section.findByIdAndDelete(req.params.id);
+    req.io.emit('section:deleted', { id: req.params.id });
     res.json({ success: true });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
@@ -1277,10 +1375,11 @@ app.post('/api/secretaire/absences', auth, async (req, res) => {
         { new: true }
       );
       // ✅ Émission globale (admin voit le compteur mis à jour)
-      req.io.emit('absence:marked', { 
-        studentId, 
-        totalAbsences: updated?.absences || 0 
-      });
+req.io.emit('absence:marked', { 
+  studentId, 
+  absent: true,           // ← AJOUTER
+  totalAbsences: updated?.absences || 0 
+});
       // ✅ Notifie l'étudiant
       req.io.to(`user:${studentId}`).emit('absence:marked', { studentId, date, session });
       // ✅ Notifie le parent
@@ -1468,7 +1567,31 @@ app.post('/api/messages', auth, async (req, res) => {
     res.json({ success: true, message: msg });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
-
+app.post('/api/contact', async (req, res) => {
+  try {
+    const { name, email, message } = req.body;
+    if (!name || !email || !message)
+      return res.status(400).json({ success: false, message: 'All fields required' });
+    // Optionnel : envoyer un email avec nodemailer
+    console.log('Contact form:', { name, email, message });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    // Ne pas révéler si l'email existe ou non (sécurité)
+    if (!user) return res.json({ success: true });
+    // Optionnel : générer un token et envoyer un email
+    console.log('Password reset requested for:', email);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 app.patch('/api/payments/:id/pay', auth, async (req, res) => {
   try {
     const payment = await Payment.findById(req.params.id);
@@ -1479,6 +1602,104 @@ app.patch('/api/payments/:id/pay', auth, async (req, res) => {
     await payment.save();
     req.io.emit('payment:updated', { id: String(payment._id), status: 'paid', paid: payment.paid });
     res.json({ success: true, payment });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+// ══ TEACHER ROUTES ══
+
+app.get('/api/teacher/sections', auth, async (req, res) => {
+  try {
+    const sections = await Section.find({ teacherId: req.user.id })
+      .populate('studentIds', 'prenom nom email level absences actif telephone language');
+    res.json({ success: true, sections });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+app.get('/api/teacher/sections/:sectionId/students', auth, async (req, res) => {
+  try {
+    const section = await Section.findById(req.params.sectionId)
+      .populate('studentIds', 'prenom nom email level absences actif telephone language');
+    if (!section) return res.status(404).json({ success: false });
+    res.json({ success: true, students: section.studentIds || [] });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+app.post('/api/teacher/notes', auth, async (req, res) => {
+  try {
+    const { etudiantUserId, etudiantId, typeEvaluation, note, noteMax, commentaire } = req.body;
+    const userId = etudiantUserId || etudiantId;
+
+    const Etudiant = require('./models/Etudiant');
+    let etudiantDoc = await Etudiant.findOne({ user: userId });
+    if (!etudiantDoc) etudiantDoc = await Etudiant.create({ user: userId });
+
+    const newNote = await Note.create({
+      etudiant:       etudiantDoc._id,
+      typeEvaluation: typeEvaluation || 'Contrôle',
+      note:           Number(note),
+      noteMax:        Number(noteMax) || 20,
+      commentaire:    commentaire || '',
+      dateEvaluation: new Date(),
+    });
+
+    const payload = {
+      studentId: userId,
+      subject:   typeEvaluation,
+      note:      Number(note),
+      noteMax:   Number(noteMax) || 20,
+    };
+
+    req.io.to(`user:${userId}`).emit('note:added', payload);
+    req.io.emit('note:added', payload);
+
+    const parent = await User.findOne({ linkedStudent: userId });
+    if (parent) req.io.to(`user:${parent._id}`).emit('note:added', payload);
+
+    res.json({ success: true, note: newNote });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+app.post('/api/teacher/exams', auth, async (req, res) => {
+  try {
+    const exam = await Exam.create({ ...req.body, createdBy: req.user.id });
+    req.io.emit('exam:added', exam);
+    res.json({ success: true, exam });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+app.get('/api/teacher/exams', auth, async (req, res) => {
+  try {
+    const exams = await Exam.find({ createdBy: req.user.id }).sort({ date: 1 });
+    res.json({ success: true, exams });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+// À AJOUTER après app.get('/api/teacher/exams'...)
+app.delete('/api/teacher/exams/:id', auth, async (req, res) => {
+  try {
+    await Exam.findOneAndDelete({ _id: req.params.id, createdBy: req.user.id });
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+app.get('/api/teacher/sections/:sectionId/notes', auth, async (req, res) => {
+  try {
+    const section = await Section.findById(req.params.sectionId);
+    if (!section) return res.status(404).json({ success: false });
+    const Etudiant = require('./models/Etudiant');
+    const etudiants = await Etudiant.find({ user: { $in: section.studentIds } });
+    const notes = await Note.find({ etudiant: { $in: etudiants.map(e => e._id) } })
+      .populate({ path: 'etudiant', populate: { path: 'user', select: 'prenom nom email' } })
+      .sort({ dateEvaluation: -1 });
+    res.json({ success: true, notes });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+app.get('/api/teacher/sections/:sectionId/absences', auth, async (req, res) => {
+  try {
+    const section = await Section.findById(req.params.sectionId);
+    if (!section) return res.status(404).json({ success: false });
+    const absences = await Absence.find({ studentId: { $in: section.studentIds } }).sort({ date: -1 });
+    res.json({ success: true, absences });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 /* ══════════════════════════════════════════════════════
@@ -1514,7 +1735,9 @@ const PORT = process.env.PORT || 5000;
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/langschool')
   .then(() => {
     console.log('✅ MongoDB connecté');
-    server.listen(PORT, () => console.log(`🚀 Serveur sur http://localhost:${PORT}`));
+   server.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Serveur accessible sur http://192.168.130.115:${PORT}`);
+});
   })
   .catch(err => {
     console.error('❌ MongoDB erreur:', err);
