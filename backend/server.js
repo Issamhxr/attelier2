@@ -1728,6 +1728,21 @@ io.on('connection', (socket) => {
   });
 });
 /* ══════════════════════════════════════════════════════
+   SEED — temporary route, remove after first use
+══════════════════════════════════════════════════════ */
+app.post('/api/seed-admin', async (req, res) => {
+  if (req.body.secret !== 'seed_attelier_2024') return res.status(403).json({ error: 'Forbidden' });
+  try {
+    const exists = await User.findOne({ email: 'admin@schoolcore.com' });
+    if (exists) return res.json({ message: 'Admin already exists' });
+    const bcryptLib = require('bcryptjs');
+    const hashed = await bcryptLib.hash('Admin123!', 12);
+    await User.create({ nom: 'Admin', prenom: 'School', email: 'admin@schoolcore.com', password: hashed, role: 'admin', actif: true });
+    res.json({ message: 'Admin created — email: admin@schoolcore.com / password: Admin123!' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+/* ══════════════════════════════════════════════════════
    DÉMARRAGE
 ══════════════════════════════════════════════════════ */
 const PORT = process.env.PORT || 5000;
